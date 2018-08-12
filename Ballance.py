@@ -87,97 +87,25 @@ def DetectInput():
 pwm = Adafruit_PCA9685.PCA9685()
 
 #ustawianie odpowiedniej czestotliwosci pwm
-pwm.set_pwm_freq(60)
-
-class PIDController:
-    refresh_time_delta = 1.0/30.0
-    
-    def UpdatePID(self):
-        self.x_error = self.ball_actual_velocity[0] - self.ball_target_velocity[0]
-        self.y_error = self.ball_actual_velocity[1] - self.ball_target_velocity[1]
-        
-        self.x_servo += (self.x_error * self.KP.value) + (self.x_prev_error * self.KD.value) + (self.x_error_sum * self.KI.value)
-        self.y_servo += (self.y_error * self.KP.value) + (self.y_prev_error * self.KD.value) + (self.y_error_sum * self.KI.value)
-        
-        self.x_servo = min(250.0, max(-250.0, self.x_servo))
-        self.y_servo = min(250.0, max(-250.0, self.y_servo))
-        
-        servoUpdater.moveServo(0, int(self.x_servo))
-        servoUpdater.moveServo(1, -int(self.y_servo))
-        
-        self.x_prev_error = self.x_error
-        self.y_prev_error = self.y_error
-        
-        self.x_error_sum += self.x_error
-        self.y_error_sum += self.y_error
-        
-        self.x_error_sum *= 0.92
-        self.y_error_sum *= 0.92
-       
-        #print(PIDController.coef_P * (self.ball_target_velocity[0] - self.ball_actual_velocity[0]))
-    
-    def dotask(self):
-        # This method runs in a separate thread
-        lastTime = time.time()
-        currentTime = lastTime
-        
-        while not self.terminated:
-            lastTime = time.time()
-            PIDController.UpdatePID(self)
-            currentTime = time.time()
-            
-            if currentTime - lastTime < PIDController.refresh_time_delta:
-                time.sleep(PIDController.refresh_time_delta- currentTime + lastTime)
-            else:
-                print('PIDController update cycle took more than specified')
-    
-    def __init__(self, servoupdater):
-        #super(ServoUpdater, self).__init__()
-        self.ball_target_velocity = Array('d', [0.0, 0.0])
-        self.ball_actual_velocity = Array('d', [0.0, 0.0])
-        
-        self.KP = Value('d', 142.0)
-        self.KD = Value('d', 0.0)
-        self.KI = Value('d', 0.0)
-        
-        self.x_servo = 0.0
-        self.y_servo = 0.0
-        
-        self.x_error = 0.0
-        self.y_error = 0.0
-        
-        self.x_prev_error = 0.0
-        self.y_prev_error = 0.0
-        
-        self.x_error_sum = 0.0
-        self.y_error_sum = 0.0
-                               
-        self.terminated = False
-        
-        self.servoUpdater = servoupdater
-        
-        self.controllerProcess = Process(target=self.dotask)
-        self.controllerProcess.daemon = True
-        self.controllerProcess.start()
-    
+pwm.set_pwm_freq(60)   
 
 #klasa zarzadzajaca pozycja serw (w funkcji moveServo podaje sie zadana pozycje serwa i ta klasa steruje tym serwem tak, zeby osiagnal te pozycje)        
 class ServoUpdater:
     #ustawienia serw (tablice z wartosciami parametrow dla poszczegolnych kanalow)
-    servo_pulse_neutral = (385, 396)
+    servo_pulse_neutral = (379, 398)
     servo_pulse_range = (100, 100)
 
     #aktualne i docelowe pozycje serw
     servo_actual_pos = [0, 0]
     #ogranicznik wychylenia serw w skali od 0 do 1000
-    servo_pos_limit = (250, 250)
+    servo_pos_limit = (300, 300)
     #servo_target_pos = [0, 0]
 
     #szybkosc ruchu danego serwa
-    servo_movement_speed = (5000, 5000)
+    servo_movement_speed = (2000, 2000)
     
     #czas pomiedzy odswiezeniem pozycji serw
-    servo_refresh_time_delta = 1.0/60.0
+    servo_refresh_time_delta = 1.0/40.0
 
 
     #porusza serwem na kanale 'channel' na pozycje 'pos' (w skali od -1000 do 1000)
@@ -225,6 +153,83 @@ class ServoUpdater:
         self.updaterProcess.start()
     
     
+class PIDController:
+    refresh_time_delta = 1.0/40.0
+    
+    def UpdatePID(self):
+        self.x_error = self.ball_target_velocity[0] - self.ball_actual_velocity[0]
+        self.y_error = self.ball_target_velocity[1] - self.ball_actual_velocity[1]
+        
+        self.x_derivative = (self.x_error - self.x_prev_error) / PIDController.refresh_time_delta
+        self.y_derivative = (self.y_error - self.y_prev_error) / PIDController.refresh_time_delta
+        
+        self.x_servo += (self.x_error * self.KP.value) + (self.x_derivative * self.KD.value) + (self.x_error_sum * self.KI.value * PIDController.refresh_time_delta)
+        self.y_servo += (self.y_error * self.KP.value) + (self.y_derivative * self.KD.value) + (self.y_error_sum * self.KI.value * PIDController.refresh_time_delta)
+        
+        self.x_servo = min(ServoUpdater.servo_pos_limit[0], max(-ServoUpdater.servo_pos_limit[0], self.x_servo))
+        self.y_servo = min(ServoUpdater.servo_pos_limit[1], max(-ServoUpdater.servo_pos_limit[1], self.y_servo))
+        
+        servoUpdater.moveServo(0, -int(self.x_servo))
+        servoUpdater.moveServo(1, int(self.y_servo))
+        
+        self.x_prev_error = self.x_error
+        self.y_prev_error = self.y_error
+        
+        self.x_error_sum += self.x_error * PIDController.refresh_time_delta
+        self.y_error_sum += self.y_error * PIDController.refresh_time_delta
+        
+        self.x_error_sum *= 0.95
+        self.y_error_sum *= 0.95
+       
+        #print(PIDController.coef_P * (self.ball_target_velocity[0] - self.ball_actual_velocity[0]))
+    
+    def dotask(self):
+        # This method runs in a separate thread
+        lastTime = time.time()
+        currentTime = lastTime
+        
+        while not self.terminated:
+            lastTime = time.time()
+            PIDController.UpdatePID(self)
+            currentTime = time.time()
+            
+            if currentTime - lastTime < PIDController.refresh_time_delta:
+                time.sleep(PIDController.refresh_time_delta - currentTime + lastTime)
+            else:
+                print('PIDController update cycle took more than specified')
+    
+    def __init__(self, servoupdater):
+        #super(ServoUpdater, self).__init__()
+        self.ball_target_velocity = Array('d', [0.0, 0.0])
+        self.ball_actual_velocity = Array('d', [0.0, 0.0])
+        
+        self.KP = Value('d', 90.0)
+        self.KD = Value('d', 0.0)#200.0)
+        self.KI = Value('d', 40.0)
+        
+        self.x_servo = 0.0
+        self.y_servo = 0.0
+        
+        self.x_error = 0.0
+        self.y_error = 0.0
+        
+        self.x_prev_error = 0.0
+        self.y_prev_error = 0.0
+        
+        self.x_derivative = 0.0
+        self.y_derivative = 0.0
+        
+        self.x_error_sum = 0.0
+        self.y_error_sum = 0.0
+                               
+        self.terminated = False
+        
+        self.servoUpdater = servoupdater
+        
+        self.controllerProcess = Process(target=self.dotask)
+        self.controllerProcess.daemon = True
+        self.controllerProcess.start()
+    
 ##################
 #WYKRYWANIE KULKI#
 ##################
@@ -232,7 +237,7 @@ class ServoUpdater:
 #NAPISAC PRZETWARZANIE OBRAZU Z UZYCIEM BIBLIOTEKI MULTIPROCESSING
 
 poolSize = 3
-colorThreshold = 90
+colorThreshold = 70
 
 #przetwarza otrzymany obraz i zwraca liczbe wykrytych pixeli i ich sume pozycji
 def ProcessImage(image, threadNumber):
@@ -300,6 +305,7 @@ class ImageProcessor(threading.Thread):
         
         self.lastTime = time.time()
         self.position_previous = [0.0, 0.0]
+        self.ball_lost = True
         
         #ustawienia dotyczace procesow przetwarzajacych obraz
         self.processPool = Pool(processes=poolSize)
@@ -338,9 +344,20 @@ class ImageProcessor(threading.Thread):
                         self.owner.result_ball_position[0] = pixelSumPos[0] / pixelCount / capturedImage.width
                         self.owner.result_ball_position[1] = pixelSumPos[1] / pixelCount / capturedImage.height
                         
-                    self.owner.result_ball_velocity = [self.position_previous[0] - self.owner.result_ball_position[0],
-                                                       self.position_previous[1] - self.owner.result_ball_position[1]]
-                    
+                        if self.ball_lost:
+                            self.owner.result_ball_velocity = [0.0, 0.0]
+                        
+                        else:
+                            self.owner.result_ball_velocity = [self.position_previous[0] - self.owner.result_ball_position[0],
+                                                               self.position_previous[1] - self.owner.result_ball_position[1]]
+                        
+                        self.ball_lost = False
+                        
+                    else:
+                        self.ball_lost = True
+                        self.owner.result_ball_velocity = [0.0, 0.0]
+                        
+                        
                     currentTime = time.time()
                     self.owner.result_ball_velocity[0] /= currentTime - self.lastTime
                     self.owner.result_ball_velocity[1] /= currentTime - self.lastTime
@@ -349,17 +366,6 @@ class ImageProcessor(threading.Thread):
                     self.lastTime = time.time()
                     
                     #print(self.owner.result_ball_velocity)
-                    
-                    
-                        
-                    #print(self.owner.result_ball_position)
-                    
-                    #print(pixelCount)
-                    
-                    #capturedImage.putpixel(self.owner.result_ball_position, (255, 0, 0))
-                    #capturedImage.save('out.bmp')
-                    
-                    
                     
                     #print('Processing took ' + str(time.time() - startTime))
                     
@@ -434,8 +440,8 @@ class ProcessOutput(object):
 camera = PiCamera()
 
 #ustawianie rozdzielczosci kamery
-camera.resolution = (70, 70)
-camera.framerate = 20
+camera.resolution = (40, 40)
+camera.framerate = 40
 
 #ustawianie parametrow ruchu serwami
 delay = 1.0/30.0
@@ -459,37 +465,42 @@ if __name__=='__main__':
     output = ProcessOutput()
     camera.start_recording(output, format='mjpeg')
     
-    while not output.done:
-        camera.wait_recording(0.01)
-        
-        pidController.ball_actual_velocity[0] = output.result_ball_velocity[0]
-        pidController.ball_actual_velocity[1] = output.result_ball_velocity[1]
-        
-        DetectInput() #sprawdzanie wejscia z klawiatury
-        #updateServoPositions()
-        
-        #lewo i prawo
-        if key_pressed[0]:
-            pidController
-            pidController.KP.value += 1
+    try:
+        while not output.done:
+            camera.wait_recording(0.01)
             
-            print('KP = ' + str(pidController.KP))
+            pidController.ball_actual_velocity[0] = output.result_ball_velocity[0]
+            pidController.ball_actual_velocity[1] = output.result_ball_velocity[1]
             
-        elif key_pressed[1]:
-            pidController.KP.value -= 1
-            print('KP = ' + str(pidController.KP))
+            DetectInput() #sprawdzanie wejscia z klawiatury
+            #updateServoPositions()
             
-        #gora i dol
-        if key_pressed[2]:
-            pidController.KD.value += 1
-            print('KD = ' + str(pidController.KD))
+            #lewo i prawo
+            if key_pressed[0]:
+                pidController
+                pidController.KP.value += 0.01
+                
+                print('KP = ' + str(pidController.KP.value))
+                
+            elif key_pressed[1]:
+                pidController.KP.value -= 0.01
+                print('KP = ' + str(pidController.KP.value))
+                
+            #gora i dol
+            if key_pressed[2]:
+                pidController.KD.value += 0.01
+                print('KI = ' + str(pidController.KD.value))
+                
+            elif key_pressed[3]:
+                pidController.KD.value -= 0.01
+                print('KI = ' + str(pidController.KD.value))
+                
             
-        elif key_pressed[3]:
-            pidController.KD.value -= 1
-            print('KD = ' + str(pidController.KD))
-            
-        
-        #print(output.result_ball_position)
+            #print(output.result_ball_position)
+                
+    except KeyboardInterrupt:
+        camera.stop_preview()
+        camera.stop_recording()
         
     camera.stop_recording()
 
