@@ -1,4 +1,4 @@
-class PIDController:
+class PIDController(object):
     
     def __init__(self):
         self.ball_target_velocity = [0.0, 0.0]    #aktualna predkosc kulki
