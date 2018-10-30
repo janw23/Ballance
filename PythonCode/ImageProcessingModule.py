@@ -1,6 +1,11 @@
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
+import cv2
+
+from imutils.video.pivideostream import PiVideoStream
+import imutils
+import numpy as np
 
 from multiprocessing import Process
 from multiprocessing import Value
@@ -8,23 +13,14 @@ from multiprocessing import Value
 class ImageProcessor(object):
     
     #stale
-    camera_resolution = (100, 100)
-    camera_framerate = 30
-    
-    def InitializeCamera(self):    #inicjalizacja kamery
-        self.camera = PiCamera()
-        self.camera.resolution = ImageProcessor.camera_resolution
-        self.camera.framerate = ImageProcessor.camera_framerate
-        self.rawCapture = PiRGBArray(self.camera, size=ImageProcessor.camera_resolution)    #przygotowanie miejsca na przechowanie obrazu z kamery w surowej formie
+    camera_resolution = (112, 112)
+    camera_framerate = 40
         
-        time.sleep(0.1)    #czas dla kamery na ustawienie parametrow
-    
-    
     def __init__(self):
-        ImageProcessor.InitializeCamera(self)
-        
+        print("ImageProcessor object created")
         
     def StartProcessing(self):   #uruchamia proces przetwarzajacy obraz
+        print("Starting image processing")
         #wartosci-rezultaty przetwarzania obrazu
         self.result_x = Value('d', 0.0)
         self.result_y = Value('d', 0.0)
@@ -35,23 +31,38 @@ class ImageProcessor(object):
         
         
     def StopProcessing(self):    #wydaje polecenie do zatrzymania przetwarzania obrazu
+        print("Stopping image processing")
         self.process.terminate()
         
         
     def ProcessImage(self):    #przetwarza obraz pobierajac klatke z kamery i wykonujac na niej operacje
+        self.videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory w sposob ciagly czyta kolejne klatki z kamery w osobnym watku
+        time.sleep(1)
         
-        for self.frame in self.camera.capture_continuous(self.rawCapture, format='rgb', use_video_port=True):
-            self.capturedImage = self.frame.array #zapisywanie otrzymanego zdjecia jako tablicy
+        lastTime = time.time()
+        a = 0
+        while True:
+            a = a + 1
             
-            self.result = ImageProcessor.FindBall(self.capturedImage)   #znajdowanie kulki na obrazie i zwracanie rezultatu
+            if a > 100:
+                print(str(a * 1.0 / (time.time() - lastTime)))
+                lastTime = time.time()
+                a = 0
+            
+            self.frame = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
+            
+            self.result = ImageProcessor.FindBall(self, self.frame)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             self.result_x = self.result[0]    #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
             self.result_y = self.result[1]
             
-            print(str(result[0]))
+            cv2.imshow("Frame", self.frame)
+            key = cv2.waitKey(1) & 0xFF
             
-            self.rawCapture.truncate(0)
+            if key == ord("q"):
+                break
             
+        self.videoStream.stop()
             
-    def FindBall(image):
+    def FindBall(self, image):
         return (5.76, 3.865)
  
