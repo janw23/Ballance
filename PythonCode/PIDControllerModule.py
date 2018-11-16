@@ -1,4 +1,4 @@
-class PIDController(object):
+class PIDController:
     
     def __init__(self):
         self.ball_target_velocity = [0.0, 0.0]    #aktualna predkosc kulki
@@ -25,7 +25,7 @@ class PIDController(object):
         self.x_derivative = 0.0
         self.y_derivative = 0.0
 
-        #calkowita suma uchybów
+        #calkowita suma uchybow
         self.x_error_sum = 0.0
         self.y_error_sum = 0.0
 

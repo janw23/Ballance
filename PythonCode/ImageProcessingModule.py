@@ -10,20 +10,27 @@ import numpy as np
 from multiprocessing import Process
 from multiprocessing import Value
  
-class ImageProcessor(object):
+class ImageProcessor:
     
     #stale
-    camera_resolution = (112, 112)
+    camera_resolution = (208, 208)
     camera_framerate = 40
+    
+    #parametry wykrywania kulki
+    yellow_lower = (20, 50, 50)
+    yellow_upper = (30, 255, 255)
         
     def __init__(self):
         print("ImageProcessor object created")
+        #wartosci-rezultaty przetwarzania obrazu
+        self.result_x = Value('i', 0)
+        self.result_y = Value('i', 0)
+        
+    def getBallPosition(self):    #zwraca pozycje kulki
+        return (self.result_x.value, self.result_y.value)
         
     def StartProcessing(self):   #uruchamia proces przetwarzajacy obraz
         print("Starting image processing")
-        #wartosci-rezultaty przetwarzania obrazu
-        self.result_x = Value('d', 0.0)
-        self.result_y = Value('d', 0.0)
         
         self.process = Process(target=ImageProcessor.ProcessImage, args=(self,))
         self.process.daemon = True
@@ -49,13 +56,16 @@ class ImageProcessor(object):
                 lastTime = time.time()
                 a = 0
             
+            
             self.frame = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
             
-            self.result = ImageProcessor.FindBall(self, self.frame)   #znajdowanie kulki na obrazie i zwracanie rezultatu
-            self.result_x = self.result[0]    #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
-            self.result_y = self.result[1]
+            self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
+            self.result_x.value = self.result[0]    #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+            self.result_y.value = self.result[1]
             
-            cv2.imshow("Frame", self.frame)
+            #print(str(self.result_x))
+            
+            cv2.imshow("Frame", cv2.resize(self.frame, (400, 400)))
             key = cv2.waitKey(1) & 0xFF
             
             if key == ord("q"):
@@ -63,6 +73,18 @@ class ImageProcessor(object):
             
         self.videoStream.stop()
             
-    def FindBall(self, image):
-        return (5.76, 3.865)
- 
+    def FindBall(self):
+        
+        self.hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+        self.mask = cv2.inRange(self.hsv, ImageProcessor.yellow_lower, ImageProcessor.yellow_upper)
+        self.mask = cv2.erode(self.mask, None, iterations=2)
+        self.mask = cv2.dilate(self.mask, None, iterations=2)
+	
+        self.center = (-666, -666)
+        
+        M = cv2.moments(self.mask)
+        if M['m00'] > 0:
+            self.center = (int(M['m10']/M['m00']), int(M['m01']/M['m00']))
+            cv2.circle(self.frame, self.center, 10, (0, 0, 255), -1)
+            	
+        return self.center

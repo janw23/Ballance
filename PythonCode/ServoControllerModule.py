@@ -13,7 +13,7 @@ def sign(num):
     
     return 0.0
 
-class ServoController(object):
+class ServoController:
     
     #stale wartosci
     servo_pulse_neutral = (368, 370)    #wartosci pwm dla pozycji neutralnych serw
