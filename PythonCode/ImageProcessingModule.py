@@ -23,8 +23,10 @@ class ImageProcessor:
     def __init__(self):
         print("ImageProcessor object created")
         #wartosci-rezultaty przetwarzania obrazu
-        self.result_x = Value('i', 0)
-        self.result_y = Value('i', 0)
+        self.result_x = Value('f', 0.0)
+        self.result_y = Value('f', 0.0)
+        
+        self.key = Value('i', 0)
         
     def getBallPosition(self):    #zwraca pozycje kulki
         return (self.result_x.value, self.result_y.value)
@@ -60,12 +62,12 @@ class ImageProcessor:
             self.frame = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
             
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
-            self.result_x.value = self.result[0]    #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
-            self.result_y.value = self.result[1]
             
-            #print(str(self.result_x))
+            if self.result[0] != -666:
+                self.result_x.value = self.result[0] / ImageProcessor.camera_resolution[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+                self.result_y.value = self.result[1] / ImageProcessor.camera_resolution[1]
             
-            cv2.imshow("Frame", cv2.resize(self.frame, (400, 400)))
+            cv2.imshow("Frame", self.frame)
             key = cv2.waitKey(1) & 0xFF
             
             if key == ord("q"):

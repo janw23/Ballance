@@ -18,8 +18,8 @@ class ServoController:
     #stale wartosci
     servo_pulse_neutral = (368, 370)    #wartosci pwm dla pozycji neutralnych serw
     servo_pulse_range = (100, 100)      #zakres wartosci sygnalu pwm dla ruchu serw
-    servo_pos_limit = (1000, 1000)    #ograniczenia wychylen serw (w skali od 0 do 1000)
-    servo_movement_speed = (5000, 5000)    #szybkosci ruchu serw
+    servo_pos_limit = (300, 300)    #ograniczenia wychylen serw (w skali od 0 do 1000)
+    servo_movement_speed = (4000, 4000)    #szybkosci ruchu serw
     
     def __init__(self):
         self.pwm = Adafruit_PCA9685.PCA9685()  #laczenie sie z plytka sterujaca serwami
@@ -33,6 +33,7 @@ class ServoController:
         self.servo_target_pos[channel] = max(-ServoController.servo_pos_limit[channel], min(ServoController.servo_pos_limit[channel], pos))
 
     def update(self, deltaTime):    #aktualizowanie pozycji serw
+        #magnitude = sqrt(self.servo_target_pos[0] * self.servo_actual_pos[0] + self.servo_target_pos[0] * self.servo_actual_pos[0])
         for i in range(2): #tylko 2 serwa
             
             movement_dir = sign(self.servo_target_pos[i] - self.servo_actual_pos[i])

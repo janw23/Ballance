@@ -1,13 +1,14 @@
 class PIDController:
     
     def __init__(self):
+        self.servo_pos_limit = (1000, 1000)    #ograniczenia wychylen serw (w skali od 0 do 1000)
         self.ball_target_velocity = [0.0, 0.0]    #aktualna predkosc kulki
-        self.ball_actual_velocity = [0.0, 0.0]    #docelowa predkosc kulki
+        self.ball_actual_velocity = (0.0, 0.0)    #docelowa predkosc kulki
 
         #wspolczynniki kontroli
-        self.KP = 90.0    #wzmocnienie czesci proporcjonalnej
-        self.KD = 0.0    #wzmocnienie czesci rozniczkujacej
-        self.KI = 40.0    #wzmocnienie czesci calkujacej
+        self.KP = 70.0    #wzmocnienie czesci proporcjonalnej
+        self.KD = 0.3   #wzmocnienie czesci rozniczkujacej
+        self.KI = 0.0    #wzmocnienie czesci calkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -40,11 +41,8 @@ class PIDController:
         self.x_servo += (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * self.KI * deltaTime)
         self.y_servo += (self.y_error * self.KP) + (self.y_derivative * self.KD) + (self.y_error_sum * self.KI * deltaTime)
 
-        #self.x_servo = min(self.ServoUpdater.servo_pos_limit[0], max(-self.ServoUpdater.servo_pos_limit[0], self.x_servo))
-        #self.y_servo = min(self.ServoUpdater.servo_pos_limit[1], max(-self.ServoUpdater.servo_pos_limit[1], self.y_servo))
-
-        #self.servoUpdater.moveServo(0, -int(self.x_servo))
-        #self.servoUpdater.moveServo(1, int(self.y_servo))
+        self.x_servo = min(self.servo_pos_limit[0], max(-self.servo_pos_limit[0], self.x_servo))
+        self.y_servo = min(self.servo_pos_limit[1], max(-self.servo_pos_limit[1], self.y_servo))
 
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error
