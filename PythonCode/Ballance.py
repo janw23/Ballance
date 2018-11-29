@@ -27,7 +27,7 @@ key_pressed = [False, False, False, False]
 while True:
     timeStart = time.perf_counter()
     
-    if False:
+    if True:
         ball_position_actual = imageProcessor.getBallPosition()
         pidController.ball_actual_velocity = ((ball_position_actual[0] - ball_position_previous[0]) / targetDeltaTime, (ball_position_actual[1] - ball_position_previous[1]) / targetDeltaTime)
         pidController.update(targetDeltaTime)
@@ -77,8 +77,8 @@ while True:
     
     #print(pidController.ball_actual_velocity)
     
-    #servoController.moveServo(0, int(pidController.x_servo))
-    #servoController.moveServo(1, -int(pidController.y_servo))
+    servoController.moveServo(0, int(pidController.x_servo))
+    servoController.moveServo(1, -int(pidController.y_servo))
     servoController.update(targetDeltaTime)
     
     sleep(targetDeltaTime - time.perf_counter() + timeStart)

@@ -2,6 +2,7 @@ from __future__ import division
 import sys
 sys.path.append('/home/pi/Adafruit_Python_PCA9685/')
 import Adafruit_PCA9685
+import math
 
 #przydatne funkcje matematyczne
 def sign(num):
@@ -33,7 +34,12 @@ class ServoController:
         self.servo_target_pos[channel] = max(-ServoController.servo_pos_limit[channel], min(ServoController.servo_pos_limit[channel], pos))
 
     def update(self, deltaTime):    #aktualizowanie pozycji serw
-        #magnitude = sqrt(self.servo_target_pos[0] * self.servo_actual_pos[0] + self.servo_target_pos[0] * self.servo_actual_pos[0])
+        #normalizacja wektora docelowego wychylenia
+        #magnitude = math.sqrt(self.servo_target_pos[0] * self.servo_actual_pos[0] + self.servo_target_pos[1] * self.servo_actual_pos[1])
+        #if magnitude != 0:
+        #    self.servo_target_pos[0] = min(magnitude, ServoController.servo_pos_limit[0]) * self.servo_target_pos[0] / magnitude
+        #    self.servo_target_pos[1] = min(magnitude, ServoController.servo_pos_limit[1]) * self.servo_target_pos[1] / magnitude
+        
         for i in range(2): #tylko 2 serwa
             
             movement_dir = sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
