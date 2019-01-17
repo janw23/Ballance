@@ -1,10 +1,6 @@
-import ImageProcessingModule as IPM
+import ServoControllerModule as SCM
 from time import sleep
 
-imageProcessor = IPM.ImageProcessor()
+servoController = SCM.ServoController()
 
-imageProcessor.StartProcessing()
-
-sleep(50)
-
-imageProcessor.StopProcessing()
+sleep(1)

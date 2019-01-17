@@ -3,21 +3,12 @@ import sys
 sys.path.append('/home/pi/Adafruit_Python_PCA9685/')
 import Adafruit_PCA9685
 import math
-
-#przydatne funkcje matematyczne
-def sign(num):
-    if num > 0:
-        return 1.0
-    
-    elif num < 0:
-        return -1.0
-    
-    return 0.0
+import MathModule as MM
 
 class ServoController:
     
     #stale wartosci
-    servo_pulse_neutral = (368, 370)    #wartosci pwm dla pozycji neutralnych serw
+    servo_pulse_neutral = (380, 370)    #wartosci pwm dla pozycji neutralnych serw
     servo_pulse_range = (100, 100)      #zakres wartosci sygnalu pwm dla ruchu serw
     servo_pos_limit = (300, 300)    #ograniczenia wychylen serw (w skali od 0 do 1000)
     servo_movement_speed = (4000, 4000)    #szybkosci ruchu serw
@@ -29,6 +20,9 @@ class ServoController:
         #zmienne wartosci
         self.servo_actual_pos = [0, 0]    #aktualna pozycja serwa
         self.servo_target_pos = [0, 0]    #docelowa pozycja serwa
+        
+        #aplikowanie domyslnych ustawien serw
+        self.update(0)
 
     def moveServo(self, channel, pos):   #wydaje polecenie poruszenia serwem na kanale 'channel' na pozycje 'pos' (w skali od -1000 do 1000)
         self.servo_target_pos[channel] = max(-ServoController.servo_pos_limit[channel], min(ServoController.servo_pos_limit[channel], pos))
@@ -42,7 +36,7 @@ class ServoController:
         
         for i in range(2): #tylko 2 serwa
             
-            movement_dir = sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
+            movement_dir = MM.sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
             self.servo_actual_pos[i] += ServoController.servo_movement_speed[i] * movement_dir * deltaTime
             
             if movement_dir > 0:

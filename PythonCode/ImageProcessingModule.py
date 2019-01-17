@@ -14,10 +14,11 @@ class ImageProcessor:
     
     #stale
     camera_resolution = (208, 208)
+    camera_resolution_cropped = (198, 198)
     camera_framerate = 40
     
     #parametry wykrywania kulki
-    yellow_lower = (20, 50, 50)
+    yellow_lower = (20, 50, 60)
     yellow_upper = (30, 255, 255)
         
     def __init__(self):
@@ -51,7 +52,7 @@ class ImageProcessor:
         lastTime = time.time()
         a = 0
         while True:
-            a = a + 1
+            #a = a + 1
             
             if a > 100:
                 print(str(a * 1.0 / (time.time() - lastTime)))
@@ -60,12 +61,18 @@ class ImageProcessor:
             
             
             self.frame = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
+            #przycinanie klatki
+            boundLeft = (self.camera_resolution[0] - self.camera_resolution_cropped[0])//2
+            boundRight = self.camera_resolution[0] - boundLeft
+            boundDown = (self.camera_resolution[1] - self.camera_resolution_cropped[1])//2
+            boundUp = self.camera_resolution[1] - boundDown
+            self.frame = self.frame[boundLeft:boundRight, boundDown:boundUp]
             
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
             if self.result[0] != -666:
-                self.result_x.value = self.result[0] / ImageProcessor.camera_resolution[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
-                self.result_y.value = self.result[1] / ImageProcessor.camera_resolution[1]
+                self.result_x.value = self.result[0] / ImageProcessor.camera_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+                self.result_y.value = self.result[1] / ImageProcessor.camera_resolution_cropped[1]
             
             cv2.imshow("Frame", self.frame)
             key = cv2.waitKey(1) & 0xFF
