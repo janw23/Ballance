@@ -43,9 +43,9 @@ class PIDController:
         self.ball_velocity_smoothing = 0.85        #wspolczynnik wygladzania aktualizacji predkosci kulki
 
         #wspolczynniki kontroli
-        self.KP = 45.0    #wzmocnienie czesci proporcjonalnej
-        self.KD = 0.0   #wzmocnienie czesci rozniczkujacej
-        self.KI = 0.0    #wzmocnienie czesci calkujacej
+        self.KP = 40.0    #wzmocnienie czesci proporcjonalnej
+        self.KD = 1.0   #wzmocnienie czesci rozniczkujacej
+        self.KI = 20.0    #wzmocnienie czesci calkujacej
 
         #pozycja serwa
         self.x_servo = 0.0

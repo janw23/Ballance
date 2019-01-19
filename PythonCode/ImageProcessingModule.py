@@ -18,7 +18,7 @@ class ImageProcessor:
     camera_framerate = 40
     
     #parametry wykrywania kulki
-    yellow_lower = (20, 50, 60)
+    yellow_lower = (20, 50, 50)
     yellow_upper = (30, 255, 255)
         
     def __init__(self):
@@ -70,9 +70,8 @@ class ImageProcessor:
             
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
-            if self.result[0] != -666:
-                self.result_x.value = self.result[0] / ImageProcessor.camera_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
-                self.result_y.value = self.result[1] / ImageProcessor.camera_resolution_cropped[1]
+            self.result_x.value = self.result[0] / ImageProcessor.camera_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+            self.result_y.value = self.result[1] / ImageProcessor.camera_resolution_cropped[1]
             
             cv2.imshow("Frame", self.frame)
             key = cv2.waitKey(1) & 0xFF

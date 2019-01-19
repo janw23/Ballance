@@ -11,7 +11,7 @@ class ServoController:
     servo_pulse_neutral = (380, 370)    #wartosci pwm dla pozycji neutralnych serw
     servo_pulse_range = (100, 100)      #zakres wartosci sygnalu pwm dla ruchu serw
     servo_pos_limit = (300, 300)    #ograniczenia wychylen serw (w skali od 0 do 1000)
-    servo_movement_speed = (4000, 4000)    #szybkosci ruchu serw
+    servo_movement_speed = (3000, 3000)    #szybkosci ruchu serw
     
     def __init__(self):
         self.pwm = Adafruit_PCA9685.PCA9685()  #laczenie sie z plytka sterujaca serwami
