@@ -13,13 +13,13 @@ from multiprocessing import Value
 class ImageProcessor:
     
     #stale
-    camera_resolution = (208, 208)
-    camera_resolution_cropped = (198, 198)
+    camera_resolution = (416, 416)
+    camera_resolution_cropped = (396, 396)
     camera_framerate = 40
     
     #parametry wykrywania kulki
-    yellow_lower = (20, 50, 50)
-    yellow_upper = (30, 255, 255)
+    yellow_lower = (20, 40, 40)
+    yellow_upper = (40, 255, 255)
         
     def __init__(self):
         print("ImageProcessor object created")
@@ -83,16 +83,15 @@ class ImageProcessor:
             
     def FindBall(self):
         
-        self.hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
-        self.mask = cv2.inRange(self.hsv, ImageProcessor.yellow_lower, ImageProcessor.yellow_upper)
-        self.mask = cv2.erode(self.mask, None, iterations=2)
-        self.mask = cv2.dilate(self.mask, None, iterations=2)
-	
-        self.center = (-666, -666)
+        hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, ImageProcessor.yellow_lower, ImageProcessor.yellow_upper)
+        mask = cv2.erode(mask, None, iterations=2)
+        mask = cv2.dilate(mask, None, iterations=2)
         
-        M = cv2.moments(self.mask)
+        center = (-666.0, -666.0)
+        M = cv2.moments(mask)
         if M['m00'] > 0:
-            self.center = (int(M['m10']/M['m00']), int(M['m01']/M['m00']))
-            cv2.circle(self.frame, self.center, 10, (0, 0, 255), -1)
+            center = (M['m10']/M['m00'], M['m01']/M['m00'])
+            #cv2.circle(self.frame, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)    #powoduje zle wykrywanie kulki, bo nalozone kolo przechodzi czasami do kolejnej klatki
             	
-        return self.center
+        return center

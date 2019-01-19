@@ -52,90 +52,55 @@ key_pressed = [False, False, False, False]
 
 a = 0
 #jak dlugo ma wykonywany ma byc program
-duration = 30
+duration = 3000
 timeout = time.time() + duration
 ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
+lostFrames = 0    #liczba zgubionych klatek w trakcie przetwarzania
 
 while time.time() <= timeout:
     timeStart = time.perf_counter()
     
-    if True:
-        ball_position_actual = imageProcessor.getBallPosition()
+    ball_position_actual = imageProcessor.getBallPosition()
+    if ball_position_actual[0] >= 0:
+        pidController.setActualValue(ball_position_actual)
+    
+    #if ball_position_actual[0] >= 0:    #jesli wartosc jest ujemna, to znaczy, ze kulka nie zostala wykryta
+    #    if ball_just_found:    #jesli kulka zostala dopiero znaleziona
+    #        ball_position_previous = ball_position_actual
+    #        pidController.setActualVelocity(0, 0)
+    #        ball_just_found = False
+    #        
+    #    if ball_position_actual != ball_position_previous or MM.sqrMagnitude(pidController.ball_velocity_actual) <= 0.03:    #jesli poprzednia wartosc jest identyczna jak obecna, to znaczy, ze klatka zostala zgubiona
+    #        lostFrames += 1
+    #        pidController.setActualVelocity((ball_position_actual[0] - ball_position_previous[0]) / (targetDeltaTime * lostFrames), (ball_position_actual[1] - ball_position_previous[1]) / (targetDeltaTime * lostFrames))
+    #        lostFrames = 0
+    #    else:
+    #        lostFrames += 1
+    #else:
+    #    ball_just_found = True
         
-        if ball_position_actual[0] >= 0:    #jesli wartosc jest ujemna, to znaczy, ze kulka nie zostala wykryta
-            if ball_just_found:    #jesli kulka zostala dopiero znaleziona
-                ball_position_previous = ball_position_actual
-                ball_just_found = False
+    pidController.update(targetDeltaTime)
+    ball_position_previous = ball_position_actual
+    
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_g:
+                pidController.increaseKP()
                 
-            pidController.setActualVelocity((ball_position_actual[0] - ball_position_previous[0]) / targetDeltaTime, (ball_position_actual[1] - ball_position_previous[1]) / targetDeltaTime)
-        else:
-            ball_just_found = True
-            
-        pidController.update(targetDeltaTime)
-        ball_position_previous = ball_position_actual
-        
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_g:
-                    pidController.increaseKP()
-                    
-                elif event.key == pygame.K_b:
-                    pidController.decreaseKP()
-                    
-                elif event.key == pygame.K_h:
-                    pidController.increaseKI()
-                    
-                elif event.key == pygame.K_n:
-                    pidController.decreaseKI()
-                    
-                elif event.key == pygame.K_j:
-                    pidController.increaseKD()
-                    
-                elif event.key == pygame.K_m:
-                    pidController.decreaseKD()
-                    
-    else:
-        r = 300
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RIGHT:
-                    key_pressed[0] = True
+            elif event.key == pygame.K_b:
+                pidController.decreaseKP()
                 
-                if event.key == pygame.K_LEFT:
-                    key_pressed[1] = True
-                    
-                if event.key == pygame.K_UP:
-                    key_pressed[2] = True
-                    
-                if event.key == pygame.K_DOWN:
-                    key_pressed[3] = True
-                    
-            elif event.type == pygame.KEYUP:
-                if event.key == pygame.K_RIGHT:
-                    key_pressed[0] = False
+            elif event.key == pygame.K_h:
+                pidController.increaseKI()
                 
-                if event.key == pygame.K_LEFT:
-                    key_pressed[1] = False
-                    
-                if event.key == pygame.K_UP:
-                    key_pressed[2] = False
-                    
-                if event.key == pygame.K_DOWN:
-                    key_pressed[3] = False
-                   
-        if key_pressed[0]:
-            servoController.moveServo(0, r)
-        elif key_pressed[1]:
-            servoController.moveServo(0, -r)
-        else:
-            servoController.moveServo(0, 0)
-            
-        if key_pressed[2]:
-            servoController.moveServo(1, r)
-        elif key_pressed[3]:
-            servoController.moveServo(1, -r)
-        else:
-            servoController.moveServo(1, 0)
+            elif event.key == pygame.K_n:
+                pidController.decreaseKI()
+                
+            elif event.key == pygame.K_j:
+                pidController.increaseKD()
+                
+            elif event.key == pygame.K_m:
+                pidController.decreaseKD()
     
     #animate graph
     #vel = math.sqrt(math.pow(pidController.ball_actual_velocity[0], 2) + math.pow(pidController.ball_actual_velocity[1], 2))
@@ -164,8 +129,8 @@ while time.time() <= timeout:
     dataLogger.addRecord("timestamp", time.perf_counter())
     dataLogger.addRecord("ball_pos_x", ball_position_actual[0])
     dataLogger.addRecord("ball_pos_y", ball_position_actual[1])
-    dataLogger.addRecord("ball_vel_x", pidController.ball_velocity_actual[0])
-    dataLogger.addRecord("ball_vel_y", pidController.ball_velocity_actual[1])
+    #dataLogger.addRecord("ball_vel_x", pidController.ball_velocity_actual[0])
+    #dataLogger.addRecord("ball_vel_y", pidController.ball_velocity_actual[1])
     dataLogger.addRecord("KP", pidController.KP)
     dataLogger.addRecord("KI", pidController.KI)
     dataLogger.addRecord("KD", pidController.KD)
@@ -181,11 +146,12 @@ while time.time() <= timeout:
     dataLogger.addRecord("servo_actual_y", servoController.servo_actual_pos[1])
     dataLogger.addRecord("servo_target_x", servoController.servo_target_pos[0])
     dataLogger.addRecord("servo_target_y", servoController.servo_target_pos[1])
-    dataLogger.saveRecord()
+    dataLogger.addRecord("frames_lost", lostFrames)
+    #dataLogger.saveRecord()
     
     sleep(max(targetDeltaTime - time.perf_counter() + timeStart, 0))
 
 
 
 imageProcessor.StopProcessing()
-dataLogger.saveToFile("BallanceDataLog")
+#dataLogger.saveToFile("BallanceDataLog")
