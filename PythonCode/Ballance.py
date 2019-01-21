@@ -32,7 +32,7 @@ ball_position_actual = (0.0, 0.0)
 ball_position_previous = (0.0, 0.0)
 
 #jak dlugo ma wykonywany ma byc program
-duration = 3000
+duration = 20000
 timeout = time.time() + duration
 ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -69,8 +69,8 @@ while time.time() <= timeout:
                 elif event.key == pygame.K_m:
                     pidController.decreaseKD()
         
-        servoController.moveServo(0, int(pidController.x_servo))
-        servoController.moveServo(1, -int(pidController.y_servo))
+        servoController.moveServo(0, round(pidController.x_servo))
+        servoController.moveServo(1, -round(pidController.y_servo))
         
         #dodawanie wpisow do DataLog'u
         dataLogger.addRecord("timestamp", time.perf_counter())
@@ -95,9 +95,8 @@ while time.time() <= timeout:
         dataLogger.addRecord("servo_target_y", servoController.servo_target_pos[1])
         #dataLogger.saveRecord()
         
-    if timeStart - servoUpdatedTime >= servoUpdateDeltaTime:
+    if time.perf_counter() - servoUpdatedTime >= servoUpdateDeltaTime:
+        servoController.update(time.perf_counter() - servoUpdatedTime)
         servoUpdatedTime = time.perf_counter()
-        servoController.update(servoUpdateDeltaTime)
 
-imageProcessor.StopProcessing()
-#dataLogger.saveToFile("BallanceDataLog")
+dataLogger.saveToFile("BallanceDataLog")

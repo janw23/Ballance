@@ -28,21 +28,15 @@ class ServoController:
         self.servo_target_pos[channel] = max(-ServoController.servo_pos_limit[channel], min(ServoController.servo_pos_limit[channel], pos))
 
     def update(self, deltaTime):    #aktualizowanie pozycji serw
-        #normalizacja wektora docelowego wychylenia
-        #magnitude = math.sqrt(self.servo_target_pos[0] * self.servo_actual_pos[0] + self.servo_target_pos[1] * self.servo_actual_pos[1])
-        #if magnitude != 0:
-        #    self.servo_target_pos[0] = min(magnitude, ServoController.servo_pos_limit[0]) * self.servo_target_pos[0] / magnitude
-        #    self.servo_target_pos[1] = min(magnitude, ServoController.servo_pos_limit[1]) * self.servo_target_pos[1] / magnitude
-        
         for i in range(2): #tylko 2 serwa
             
-            movement_dir = MM.sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
-            self.servo_actual_pos[i] += ServoController.servo_movement_speed[i] * movement_dir * deltaTime
+            #movement_dir = MM.sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
+            #self.servo_actual_pos[i] += ServoController.servo_movement_speed[i] * movement_dir * deltaTime
             
-            if movement_dir > 0:
-                self.servo_actual_pos[i] = min(self.servo_actual_pos[i], self.servo_target_pos[i])
-            elif movement_dir < 0:
-                self.servo_actual_pos[i] = max(self.servo_actual_pos[i], self.servo_target_pos[i])
-                
-            pos = int(ServoController.servo_pulse_neutral[i] + ServoController.servo_pulse_range[i] * self.servo_actual_pos[i] / 1000)
+            #if movement_dir > 0:
+            #    self.servo_actual_pos[i] = min(self.servo_actual_pos[i], self.servo_target_pos[i])
+            #elif movement_dir < 0:
+            #    self.servo_actual_pos[i] = max(self.servo_actual_pos[i], self.servo_target_pos[i])
+            self.servo_actual_pos[i] = self.servo_target_pos[i]
+            pos = round(ServoController.servo_pulse_neutral[i] + ServoController.servo_pulse_range[i] * self.servo_actual_pos[i] / 1000)
             self.pwm.set_pwm(i, 0, pos)

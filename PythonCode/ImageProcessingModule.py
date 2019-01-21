@@ -59,7 +59,6 @@ class ImageProcessor:
                 lastTime = time.time()
                 a = 0
             
-            
             self.frame = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
             #przycinanie klatki
             boundLeft = (self.camera_resolution[0] - self.camera_resolution_cropped[0])//2
@@ -92,6 +91,6 @@ class ImageProcessor:
         M = cv2.moments(mask)
         if M['m00'] > 0:
             center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            #cv2.circle(self.frame, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)    #powoduje zle wykrywanie kulki, bo nalozone kolo przechodzi czasami do kolejnej klatki
+            cv2.circle(self.frame, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)    #powoduje zle wykrywanie kulki, bo nalozone kolo przechodzi czasami do kolejnej klatki
             	
         return center
