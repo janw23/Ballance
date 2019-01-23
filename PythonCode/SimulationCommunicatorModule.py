@@ -45,8 +45,8 @@ class SimulationCommunicator:
         self.servo_x.value = -999
         
     def moveServos(self, tab):
-        self.servo_x.value = round(tab[0])
-        self.servo_y.value = round(tab[1])
+        self.servo_x.value = tab[0]
+        self.servo_y.value = tab[1]
                 
     def DoCommunication(self):
         timeRefreshed = time.perf_counter()

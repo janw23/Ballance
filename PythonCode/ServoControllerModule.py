@@ -44,3 +44,6 @@ class ServoController:
             if not simulationMode:
                 pos = round(ServoController.servo_pulse_neutral[i] + ServoController.servo_pulse_range[i] * self.servo_actual_pos[i] / 1000)
                 self.pwm.set_pwm(i, 0, pos)
+            else:
+                self.servo_actual_pos[0] = round(self.servo_actual_pos[0])
+                self.servo_actual_pos[1] = round(self.servo_actual_pos[1])

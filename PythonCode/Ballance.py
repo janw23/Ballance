@@ -44,7 +44,7 @@ if __name__ == '__main__':
     ball_position_previous = (0.0, 0.0)
 
     #jak dlugo ma wykonywany ma byc program
-    duration = 20000
+    duration = 20
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -121,6 +121,6 @@ if __name__ == '__main__':
                 simulationCommunicator.moveServos(servoController.servo_actual_pos)
             
 
-    dataLogger.saveToFile("BallanceDataLog")
+    #dataLogger.saveToFile("BallanceDataLog")
     if simulationMode:
         simulationCommunicator.StopProcessing()
