@@ -26,3 +26,14 @@ def magnitude(x, y=None):
     if y is not None:
         return math.sqrt(x*x + y*y)
     return math.sqrt(x[0]*x[0] + x[1]*x[1])
+
+#zwraca roznice kwadratowa miedzy target a value
+def errorsquare(target, value):
+    size = len(target)
+    sum = 0.0
+    for i in range(size):
+        a = int(target[i]) - value[i]
+        sum += a * a
+        
+    return sum
+        

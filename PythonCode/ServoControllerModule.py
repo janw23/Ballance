@@ -1,7 +1,10 @@
 from __future__ import division
-import sys
-sys.path.append('/home/pi/Adafruit_Python_PCA9685/')
-import Adafruit_PCA9685
+simulationMode = False
+
+if not simulationMode:
+    import sys
+    sys.path.append('/home/pi/Adafruit_Python_PCA9685/')
+    import Adafruit_PCA9685
 import math
 import MathModule as MM
 
@@ -14,13 +17,13 @@ class ServoController:
     servo_movement_speed = (2500, 2500)    #szybkosci ruchu serw
     
     def __init__(self):
-        self.pwm = Adafruit_PCA9685.PCA9685()  #laczenie sie z plytka sterujaca serwami
-        self.pwm.set_pwm_freq(60)
+        if not simulationMode:
+            self.pwm = Adafruit_PCA9685.PCA9685()  #laczenie sie z plytka sterujaca serwami
+            self.pwm.set_pwm_freq(60)
         
         #zmienne wartosci
         self.servo_actual_pos = [0, 0]    #aktualna pozycja serwa
         self.servo_target_pos = [0, 0]    #docelowa pozycja serwa
-        
         #aplikowanie domyslnych ustawien serw
         self.update(0)
 
@@ -30,13 +33,17 @@ class ServoController:
     def update(self, deltaTime):    #aktualizowanie pozycji serw
         for i in range(2): #tylko 2 serwa
             
-            #movement_dir = MM.sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
-            #self.servo_actual_pos[i] += ServoController.servo_movement_speed[i] * movement_dir * deltaTime
+            movement_dir = MM.sign(self.servo_target_pos[i] - self.servo_actual_pos[i])
+            self.servo_actual_pos[i] += ServoController.servo_movement_speed[i] * movement_dir * deltaTime
             
-            #if movement_dir > 0:
-            #    self.servo_actual_pos[i] = min(self.servo_actual_pos[i], self.servo_target_pos[i])
-            #elif movement_dir < 0:
-            #    self.servo_actual_pos[i] = max(self.servo_actual_pos[i], self.servo_target_pos[i])
-            self.servo_actual_pos[i] = self.servo_target_pos[i]
-            pos = round(ServoController.servo_pulse_neutral[i] + ServoController.servo_pulse_range[i] * self.servo_actual_pos[i] / 1000)
-            self.pwm.set_pwm(i, 0, pos)
+            if movement_dir > 0:
+                self.servo_actual_pos[i] = min(self.servo_actual_pos[i], self.servo_target_pos[i])
+            elif movement_dir < 0:
+                self.servo_actual_pos[i] = max(self.servo_actual_pos[i], self.servo_target_pos[i])
+                
+            if not simulationMode:
+                pos = round(ServoController.servo_pulse_neutral[i] + ServoController.servo_pulse_range[i] * self.servo_actual_pos[i] / 1000)
+                self.pwm.set_pwm(i, 0, pos)
+            else:
+                self.servo_actual_pos[0] = round(self.servo_actual_pos[0])
+                self.servo_actual_pos[1] = round(self.servo_actual_pos[1])
