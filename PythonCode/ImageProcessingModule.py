@@ -16,13 +16,11 @@ from multiprocessing import Value
 class ImageProcessor:
     
     #stale
-    camera_resolution = (416, 416)
-    camera_resulution_crop = False
-    camera_resolution_cropped = (396, 396)
+    camera_resolution = (512, 512)
     camera_framerate = 40
     
-    corner_detecton_area = (0.08, 0.08, 0.1, 0.1) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
-    detection_image_resolution = (200, 200)
+    corner_detecton_area = (0.1, 0.1, 0.07, 0.07) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
+    detection_image_resolution = (150, 150)
     
     #parametry wykrywania kulki
     yellow_lower = (20, 40, 40)
@@ -59,7 +57,7 @@ class ImageProcessor:
         lastTime = time.time()
         a = 0
         while True:
-            #a = a + 1
+            a = a + 1
             
             if a > 100:
                 print(str(a * 1.0 / (time.time() - lastTime)))
@@ -67,27 +65,21 @@ class ImageProcessor:
                 a = 0
             
             self.frame_original = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
-            self.frame = copy.copy(self.frame_original)
-            #przycinanie klatki
-            if self.camera_resulution_crop:
-                boundLeft = (self.camera_resolution[0] - self.camera_resolution_cropped[0])//2
-                boundRight = self.camera_resolution[0] - boundLeft
-                boundDown = (self.camera_resolution[1] - self.camera_resolution_cropped[1])//2
-                boundUp = self.camera_resolution[1] - boundDown
-                self.frame = self.frame[boundLeft:boundRight, boundDown:boundUp]
+            #self.frame_original = cv2.resize(self.frame_original, (200, 200))
+            #self.frame = copy.copy(self.frame_original)
             
             self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow
-            self.corners = np.array(self.corners, np.int32)
-            self.corners = self.corners.reshape((-1,1,2))
-            cv2.polylines(self.frame,[self.corners],True,(0,255,255))
+            #cv2.polylines(self.frame, [self.corners],True,(0,255,255))
             
             ImageProcessor.ChangePerspective(self)
+            self.frame_original = self.frame_original[10:141, 10:141]
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
-            self.result_x.value = self.result[0] / ImageProcessor.camera_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
-            self.result_y.value = self.result[1] / ImageProcessor.camera_resolution_cropped[1]
+            self.result_x.value = self.result[0] / ImageProcessor.detection_image_resolution[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+            self.result_y.value = self.result[1] / ImageProcessor.detection_image_resolution[1]
             
-            cv2.imshow("Frame", self.frame_original)
+            cv2.imshow("Frame Casted", self.frame_original)
+            #cv2.imshow("Frame", self.frame)
             key = cv2.waitKey(1) & 0xFF
             
             if key == ord("q"):
@@ -106,7 +98,7 @@ class ImageProcessor:
         M = cv2.moments(mask)
         if M['m00'] > 0:
             center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            cv2.circle(self.frame, (int(center[0]), int(center[1])), 7, (0, 0, 255), -1)    #powoduje zle wykrywanie kulki, bo nalozone kolo przechodzi czasami do kolejnej klatki
+            cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)    #powoduje zle wykrywanie kulki, bo nalozone kolo przechodzi czasami do kolejnej klatki
             	
         return center
     
@@ -127,10 +119,10 @@ class ImageProcessor:
                 detectionArea[1] = self.camera_resolution[1] - detectionArea[1] - detectionArea[3]
                 
             rect = (detectionArea[0], detectionArea[1], detectionArea[0] + detectionArea[2], detectionArea[1] + detectionArea[3])
-            cv2.rectangle(self.frame, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 1);
+            #cv2.rectangle(self.frame, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 1);
         
             img = self.frame_original[rect[1]:rect[3]+1, rect[0]:rect[2]+1]
-            img = copy.copy(img)
+            #img = copy.copy(img)
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
             
             if i == 0: dir = (False, False)
@@ -139,40 +131,45 @@ class ImageProcessor:
             elif i == 3: dir = (True, False)
             
             lower = (0, 0, 0)
-            upper = (180, 70, 150)
+            upper = (150, 80, 150)
             mask = cv2.inRange(hsv, lower, upper)
-            mask = cv2.dilate(mask, None, iterations=1)
-            mask = cv2.erode(mask, None, iterations=1)
+            mask = cv2.dilate(mask, None, iterations=2)
+            #mask = cv2.erode(mask, None, iterations=1)
             
             sizeX = np.size(img, 0)
             sizeY = np.size(img, 1)
             
-            neighbour_count_min = 12 * 255    #minimalna liczba sasiadow potrzebna do rozwazenia wierzcholka
+            neighbour_count_min = 6 * 255    #minimalna liczba sasiadow potrzebna do rozwazenia wierzcholka
             neighbour_count = np.zeros((sizeX, sizeY))
-            neighbour_count = convolve2d(mask, np.ones((4,4),dtype=int),'same')    #zliczanie liczby sasiadow
-            #print(str(neighbour_count))
-            img[neighbour_count > neighbour_count_min] = [0, 255, 0]
+            neighbour_count = convolve2d(mask, np.ones((3,3),dtype=int),'same')    #zliczanie liczby sasiadow
+            #img[neighbour_count > neighbour_count_min] = [0, 255, 0]
             
             #znajdowanie pozycji rogow
-            where = np.where(neighbour_count > neighbour_count_min)
+            #mask = np.zeros((sizeX, sizeY))
+            #mask[neighbour_count > neighbour_count_min] = 1
+            
+            row = np.sum(neighbour_count, axis=1)
+            col = np.sum(neighbour_count, axis=0)
+            row = np.diff(row)
+            col = np.diff(col)
+            
             cornerPos = [0.0, 0.0]
-            if len(where[0]) > 0:
-                if dir[0]: cornerPos[1] = max(where[0])
-                else: cornerPos[1] = min(where[0])
-            if len(where[1]) > 0:
-                if dir[1]: cornerPos[0] = max(where[1])
-                else: cornerPos[0] = min(where[1])
+            if dir[0]: cornerPos[1] = np.argmin(row)
+            else: cornerPos[1] = np.argmax(row)
+            if dir[1]: cornerPos[0] = np.argmin(col)
+            else: cornerPos[0] = np.argmax(col)
             
             cornerPos[0] += detectionArea[0]
             cornerPos[1] += detectionArea[1]
             corners[i] = tuple(cornerPos)
-            cv2.imshow("Corner " + str(i), img)
+            #cv2.imshow("Corner " + str(i), img)
 
-        return corners
+        return np.array(corners, np.int32)
 
     #zmienia perspektywe obrazu z kamery tak, aby byla dopasowana do "tablicy"
     def ChangePerspective(self):
-        pts = np.int32([[0,0],[self.detection_image_resolution[0],0],[self.detection_image_resolution[0], self.detection_image_resolution[1]], [0,self.detection_image_resolution[1]]])
+        pts = np.array(self.corners, np.float32)
+        pts2 = np.float32([[0,0],[self.detection_image_resolution[0],0],[self.detection_image_resolution[0], self.detection_image_resolution[1]], [0,self.detection_image_resolution[1]]])
 
-        M = cv2.getPerspectiveTransform(self.corners,pts)
-        dst = cv2.warpPerspective(self.frame_original,M,self.detection_image_resolution)
+        M = cv2.getPerspectiveTransform(pts, pts2)
+        self.frame_original = cv2.warpPerspective(self.frame_original, M, self.detection_image_resolution)

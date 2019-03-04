@@ -44,16 +44,16 @@ if __name__ == '__main__':
     ball_position_previous = (0.0, 0.0)
 
     #jak dlugo ma wykonywany ma byc program
-    duration = 20
+    duration = 50
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
     angle = 0.0
     angleSpeed = 4.0
-    angleRadius = 500
+    angleRadius = 200
 
     #jak dlugo ma wykonywany ma byc program
-    duration = 20
+    duration = 20000000
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -96,11 +96,11 @@ if __name__ == '__main__':
             if killLoop:
                 break
             
-            #servoController.moveServo(0, round(pidController.x_servo))
-            #servoController.moveServo(1, -round(pidController.y_servo))
-            servoController.moveServo(0, round(angleRadius * math.sin(angle)))
-            servoController.moveServo(1, -round(angleRadius * math.cos(angle)))
-            angle += angleSpeed * targetDeltaTime
+            servoController.moveServo(0, round(pidController.x_servo))
+            servoController.moveServo(1, -round(pidController.y_servo))
+            #servoController.moveServo(0, round(angleRadius * math.sin(angle)))
+            #servoController.moveServo(1, -round(angleRadius * math.cos(angle)))
+            #angle += angleSpeed * targetDeltaTime
             
             #dodawanie wpisow do DataLog'u
             dataLogger.addRecord("timestamp", time.perf_counter())
