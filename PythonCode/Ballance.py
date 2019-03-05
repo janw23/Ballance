@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     #ball recognition process start
     imageProcessor.StartProcessing()
-    sleep(2)    #time for camera to startup
+    sleep(1)    #time for camera to startup
 
     targetDeltaTime = 1.0 / 40.0    #control loop refresh delta
     updatedTime = 0.0
@@ -43,14 +43,9 @@ if __name__ == '__main__':
     ball_position_actual = (0.0, 0.0)
     ball_position_previous = (0.0, 0.0)
 
-    #jak dlugo ma wykonywany ma byc program
-    duration = 50
-    timeout = time.time() + duration
-    ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
-
-    angle = 0.0
-    angleSpeed = 4.0
-    angleRadius = 200
+    #angle = 0.0
+    #angleSpeed = 4.0
+    #angleRadius = 0
 
     #jak dlugo ma wykonywany ma byc program
     duration = 20000000

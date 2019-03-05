@@ -11,7 +11,7 @@ import MathModule as MM
 class ServoController:
     
     #stale wartosci
-    servo_pulse_neutral = (380, 370)    #wartosci pwm dla pozycji neutralnych serw
+    servo_pulse_neutral = (388, 379)    #wartosci pwm dla pozycji neutralnych serw
     servo_pulse_range = (100, 100)      #zakres wartosci sygnalu pwm dla ruchu serw
     servo_pos_limit = (250, 250)    #ograniczenia wychylen serw (w skali od 0 do 1000)
     servo_movement_speed = (2500, 2500)    #szybkosci ruchu serw

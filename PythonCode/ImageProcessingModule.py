@@ -5,6 +5,7 @@ import time
 import cv2
 import copy
 from scipy.signal import convolve2d
+import matplotlib.pyplot as plt
 
 from imutils.video.pivideostream import PiVideoStream
 import imutils
@@ -16,10 +17,10 @@ from multiprocessing import Value
 class ImageProcessor:
     
     #stale
-    camera_resolution = (512, 512)
+    camera_resolution = (400, 400)
     camera_framerate = 40
     
-    corner_detecton_area = (0.1, 0.1, 0.07, 0.07) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
+    corner_detecton_area = (0.09, 0.09, 0.09, 0.09) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
     detection_image_resolution = (150, 150)
     
     #parametry wykrywania kulki
@@ -65,6 +66,7 @@ class ImageProcessor:
                 a = 0
             
             self.frame_original = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
+            self.frame_original = copy.copy(self.frame_original)
             #self.frame_original = cv2.resize(self.frame_original, (200, 200))
             #self.frame = copy.copy(self.frame_original)
             
@@ -124,6 +126,7 @@ class ImageProcessor:
             img = self.frame_original[rect[1]:rect[3]+1, rect[0]:rect[2]+1]
             #img = copy.copy(img)
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            #hist = cv2.calcHist([hsv], [1, 2], None, [256, 256], [0, 256, 0, 256])
             
             if i == 0: dir = (False, False)
             elif i == 1: dir = (False, True)
@@ -131,38 +134,48 @@ class ImageProcessor:
             elif i == 3: dir = (True, False)
             
             lower = (0, 0, 0)
-            upper = (150, 80, 150)
+            upper = (180, 200, 125)
             mask = cv2.inRange(hsv, lower, upper)
-            mask = cv2.dilate(mask, None, iterations=2)
+            #mask = cv2.dilate(mask, None, iterations=1)
             #mask = cv2.erode(mask, None, iterations=1)
             
             sizeX = np.size(img, 0)
             sizeY = np.size(img, 1)
             
-            neighbour_count_min = 6 * 255    #minimalna liczba sasiadow potrzebna do rozwazenia wierzcholka
-            neighbour_count = np.zeros((sizeX, sizeY))
-            neighbour_count = convolve2d(mask, np.ones((3,3),dtype=int),'same')    #zliczanie liczby sasiadow
-            #img[neighbour_count > neighbour_count_min] = [0, 255, 0]
+            #neighbour_count_min = 6 * 255    #minimalna liczba sasiadow potrzebna do rozwazenia wierzcholka
+            #neighbour_count = np.zeros((sizeX, sizeY))
+            #neighbour_count = convolve2d(mask, np.ones((3,3),dtype=int),'same')    #zliczanie liczby sasiadow
+            mask = np.int32(mask)
+            #img[mask == 255] = [0, 255, 0]
             
             #znajdowanie pozycji rogow
             #mask = np.zeros((sizeX, sizeY))
             #mask[neighbour_count > neighbour_count_min] = 1
             
-            row = np.sum(neighbour_count, axis=1)
-            col = np.sum(neighbour_count, axis=0)
+            row = np.sum(mask, axis=1)
+            col = np.sum(mask, axis=0)
             row = np.diff(row)
             col = np.diff(col)
             
             cornerPos = [0.0, 0.0]
-            if dir[0]: cornerPos[1] = np.argmin(row)
-            else: cornerPos[1] = np.argmax(row)
-            if dir[1]: cornerPos[0] = np.argmin(col)
-            else: cornerPos[0] = np.argmax(col)
+            if dir[0]:
+                row[0] = row[-1] = 99999999
+                cornerPos[1] = np.argmin(row)
+            else:
+                row[0] = row[-1] = -99999999
+                cornerPos[1] = np.argmax(row)
+            if dir[1]:
+                col[0] = col[-1] = 99999999
+                cornerPos[0] = np.argmin(col)
+            else:
+                col[0] = col[-1] = -99999999
+                cornerPos[0] = np.argmax(col)
             
             cornerPos[0] += detectionArea[0]
             cornerPos[1] += detectionArea[1]
             corners[i] = tuple(cornerPos)
             #cv2.imshow("Corner " + str(i), img)
+            #cv2.imshow("Corner hist " + str(i), hist)
 
         return np.array(corners, np.int32)
 
