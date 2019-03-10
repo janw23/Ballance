@@ -85,8 +85,8 @@ class PIDController:
         self.y_error_sum += self.y_error * deltaTime
         
         #zmiana pozycji serw z uwzglednieniem uchybu biezacego, przyszlego oraz przeszlego
-        self.x_servo += (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * self.KI)
-        self.y_servo += (self.y_error * self.KP) + (self.y_derivative * self.KD) + (self.y_error_sum * self.KI)
+        self.x_servo = (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * self.KI)
+        self.y_servo = (self.y_error * self.KP) + (self.y_derivative * self.KD) + (self.y_error_sum * self.KI)
         
         self.x_servo = min(self.servo_pos_limit[0], max(-self.servo_pos_limit[0], self.x_servo))
         self.y_servo = min(self.servo_pos_limit[1], max(-self.servo_pos_limit[1], self.y_servo))
