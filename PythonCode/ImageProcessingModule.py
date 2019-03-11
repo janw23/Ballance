@@ -22,6 +22,7 @@ class ImageProcessor:
     
     corner_detecton_area = (0.09, 0.09, 0.09, 0.09) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
     detection_image_resolution = (150, 150)
+    detection_image_resolution_cropped = (-1, -1)
     
     #parametry wykrywania kulki
     yellow_lower = (20, 40, 40)
@@ -56,11 +57,13 @@ class ImageProcessor:
         time.sleep(1)
         
         lastTime = time.time()
-        a = 0
+        a = 90
         while True:
-            a = a + 1
             
+            a = a + 1
             if a > 100:
+                if ImageProcessor.detection_image_resolution_cropped[0] == -1:
+                    ImageProcessor.detection_image_resolution_cropped = (np.size(self.frame_original, 0), np.size(self.frame_original, 1))
                 print(str(a * 1.0 / (time.time() - lastTime)))
                 lastTime = time.time()
                 a = 0
@@ -74,11 +77,11 @@ class ImageProcessor:
             #cv2.polylines(self.frame, [self.corners],True,(0,255,255))
             
             ImageProcessor.ChangePerspective(self)
-            self.frame_original = self.frame_original[10:141, 10:141]
+            self.frame_original = self.frame_original[7:144, 7:144]
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
-            self.result_x.value = self.result[0] / ImageProcessor.detection_image_resolution[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
-            self.result_y.value = self.result[1] / ImageProcessor.detection_image_resolution[1]
+            self.result_x.value = self.result[0] / ImageProcessor.detection_image_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+            self.result_y.value = self.result[1] / ImageProcessor.detection_image_resolution_cropped[1]
             
             cv2.imshow("Frame Casted", self.frame_original)
             #cv2.imshow("Frame", self.frame)

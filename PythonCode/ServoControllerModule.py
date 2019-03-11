@@ -13,8 +13,8 @@ class ServoController:
     #stale wartosci
     servo_pulse_neutral = (388, 379)    #wartosci pwm dla pozycji neutralnych serw
     servo_pulse_range = (100, 100)      #zakres wartosci sygnalu pwm dla ruchu serw
-    servo_pos_limit = (250, 250)    #ograniczenia wychylen serw (w skali od 0 do 1000)
-    servo_movement_speed = (2500, 2500)    #szybkosci ruchu serw
+    servo_pos_limit = (800, 800)    #ograniczenia wychylen serw (w skali od 0 do 1000)
+    servo_movement_speed = (3000, 3000)    #szybkosci ruchu serw
     
     def __init__(self):
         if not simulationMode:
@@ -45,4 +45,4 @@ class ServoController:
                 pos = round(ServoController.servo_pulse_neutral[i] + ServoController.servo_pulse_range[i] * self.servo_actual_pos[i] / 1000)
                 self.pwm.set_pwm(i, 0, pos)
             else:
-                self.servo_actual_pos[i] = round(self.servo_actual_pos[i])
+                self.servo_actual_pos[i] = round(self.servo_actual_pos[i] / 1000)

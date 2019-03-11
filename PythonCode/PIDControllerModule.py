@@ -3,27 +3,27 @@ import MathModule as MM
 class PIDController:
     
     def increaseKP(self):
-        self.KP += 1
+        self.KP += 50
         print("KP = " + str(self.KP))
         
     def increaseKI(self):
-        self.KI += 1
+        self.KI += 50
         print("KI = " + str(self.KI))
         
     def increaseKD(self):
-        self.KD += 1
+        self.KD += 50
         print("KD = " + str(self.KD))
         
     def decreaseKP(self):
-        self.KP -= 1
+        self.KP -= 50
         print("KP = " + str(self.KP))
         
     def decreaseKI(self):
-        self.KI -= 1
+        self.KI -= 50
         print("KI = " + str(self.KI))
         
     def decreaseKD(self):
-        self.KD -= 1
+        self.KD -= 50
         print("KD = " + str(self.KD))
         
     #ustawia aktualna wartosc, ktora ma zostac osiagnieta
@@ -44,12 +44,12 @@ class PIDController:
         self.servo_pos_limit = (1000, 1000)    #ograniczenia wychylen serw (w skali od 0 do 1000)
         self.value_target = [0.5, 0.5]    #docelowa wartosc, ktora ma byc osiagnieta przez kontroler
         self.value_actual = [0.0, 0.0]    #aktualna wartosc
-        self.value_smoothing = 1.0        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
+        self.value_smoothing = 0.8        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
 
         #wspolczynniki kontroli
-        self.KP = 160.0    #wzmocnienie czesci proporcjonalnej
-        self.KD = 260.0   #wzmocnienie czesci rozniczkujacej
-        self.KI = 260.0    #wzmocnienie czesci calkujacej
+        self.KP = 0.7 * 1000   #wzmocnienie czesci proporcjonalnej
+        self.KI = 1.0 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 0.55 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -93,7 +93,6 @@ class PIDController:
 
         self.x_error_sum = max(min(self.x_error_sum, 1.0), -1.0) * 0.98
         self.y_error_sum = max(min(self.y_error_sum, 1.0), -1.0) * 0.98
-
 
 
 

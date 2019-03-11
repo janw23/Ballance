@@ -43,9 +43,9 @@ if __name__ == '__main__':
     ball_position_actual = (0.0, 0.0)
     ball_position_previous = (0.0, 0.0)
 
-    #angle = 0.0
-    #angleSpeed = 4.0
-    #angleRadius = 0
+    angle = 0.0
+    angleSpeed = 2
+    angleRadius = 0.2
 
     #jak dlugo ma wykonywany ma byc program
     duration = 20000000
@@ -95,7 +95,8 @@ if __name__ == '__main__':
             servoController.moveServo(1, -round(pidController.y_servo))
             #servoController.moveServo(0, round(angleRadius * math.sin(angle)))
             #servoController.moveServo(1, -round(angleRadius * math.cos(angle)))
-            #angle += angleSpeed * targetDeltaTime
+            pidController.setTargetValue(0.5 + angleRadius * math.sin(angle), 0.5 + angleRadius * math.cos(angle))
+            angle += angleSpeed * targetDeltaTime
             
             #dodawanie wpisow do DataLog'u
             dataLogger.addRecord("timestamp", time.perf_counter())
