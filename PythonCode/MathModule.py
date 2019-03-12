@@ -37,3 +37,8 @@ def errorsquare(target, value):
         
     return sum
         
+#zwraca wartosc num ograniczana przez <_min, _max>
+def clamp(num, _min, _max):
+    if num > _max: return _max
+    elif num < _min: return _min
+    return num

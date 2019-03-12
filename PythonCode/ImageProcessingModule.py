@@ -1,6 +1,7 @@
 from picamera.array import PiRGBArray
 from picamera import PiCamera
 import MathModule as MM
+import math
 import time
 import cv2
 import copy
@@ -20,7 +21,7 @@ class ImageProcessor:
     camera_resolution = (400, 400)
     camera_framerate = 40
     
-    corner_detecton_area = (0.09, 0.09, 0.09, 0.09) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
+    corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
     detection_image_resolution = (150, 150)
     detection_image_resolution_cropped = (-1, -1)
     
@@ -77,7 +78,7 @@ class ImageProcessor:
             #cv2.polylines(self.frame, [self.corners],True,(0,255,255))
             
             ImageProcessor.ChangePerspective(self)
-            self.frame_original = self.frame_original[7:144, 7:144]
+            self.frame_original = self.frame_original[4:147, 4:147]
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
             self.result_x.value = self.result[0] / ImageProcessor.detection_image_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
@@ -94,6 +95,7 @@ class ImageProcessor:
             
     #znajduje pozycje kulki
     def FindBall(self):
+        
         hsv = cv2.cvtColor(self.frame_original, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, ImageProcessor.yellow_lower, ImageProcessor.yellow_upper)
         mask = cv2.erode(mask, None, iterations=2)
@@ -103,7 +105,7 @@ class ImageProcessor:
         M = cv2.moments(mask)
         if M['m00'] > 0:
             center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)    #powoduje zle wykrywanie kulki, bo nalozone kolo przechodzi czasami do kolejnej klatki
+            #cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)
             	
         return center
     
@@ -136,47 +138,48 @@ class ImageProcessor:
             elif i == 2: dir = (True, True)
             elif i == 3: dir = (True, False)
             
-            lower = (0, 0, 0)
-            upper = (180, 200, 125)
+            lower = (0, 0, 200)
+            upper = (180, 30, 255)
             mask = cv2.inRange(hsv, lower, upper)
-            #mask = cv2.dilate(mask, None, iterations=1)
+            mask = cv2.dilate(mask, None, iterations=1)
             #mask = cv2.erode(mask, None, iterations=1)
             
-            sizeX = np.size(img, 0)
-            sizeY = np.size(img, 1)
+            center = (0, 0)
+            M = cv2.moments(mask)
+            if M['m00'] > 0:
+                center = (M['m10']/M['m00'], M['m01']/M['m00'])
+            
+            #sizeX = np.size(img, 0)
+            #sizeY = np.size(img, 1)
             
             #neighbour_count_min = 6 * 255    #minimalna liczba sasiadow potrzebna do rozwazenia wierzcholka
             #neighbour_count = np.zeros((sizeX, sizeY))
             #neighbour_count = convolve2d(mask, np.ones((3,3),dtype=int),'same')    #zliczanie liczby sasiadow
-            mask = np.int32(mask)
-            #img[mask == 255] = [0, 255, 0]
+            #mask = np.int32(mask)
+            #img[mask >= 255] = [0, 0, 255]
             
             #znajdowanie pozycji rogow
             #mask = np.zeros((sizeX, sizeY))
             #mask[neighbour_count > neighbour_count_min] = 1
             
-            row = np.sum(mask, axis=1)
-            col = np.sum(mask, axis=0)
-            row = np.diff(row)
-            col = np.diff(col)
+            #row = np.sum(mask, axis=1)
+            #col = np.sum(mask, axis=0)
+            #row = np.diff(row)
+            #col = np.diff(col)
+            #if dir[0]:
+            #    row[0] = row[-1] = 99999999
+            #    cornerPos[1] = np.argmin(row)
+            #else:
+            #    row[0] = row[-1] = -99999999
+            #    cornerPos[1] = np.argmax(row)
+            #if dir[1]:
+            #    col[0] = col[-1] = 99999999
+            #    cornerPos[0] = np.argmin(col)
+            #else:
+            #    col[0] = col[-1] = -99999999
+            #    cornerPos[0] = np.argmax(col)
             
-            cornerPos = [0.0, 0.0]
-            if dir[0]:
-                row[0] = row[-1] = 99999999
-                cornerPos[1] = np.argmin(row)
-            else:
-                row[0] = row[-1] = -99999999
-                cornerPos[1] = np.argmax(row)
-            if dir[1]:
-                col[0] = col[-1] = 99999999
-                cornerPos[0] = np.argmin(col)
-            else:
-                col[0] = col[-1] = -99999999
-                cornerPos[0] = np.argmax(col)
-            
-            cornerPos[0] += detectionArea[0]
-            cornerPos[1] += detectionArea[1]
-            corners[i] = tuple(cornerPos)
+            corners[i] = (center[0] + detectionArea[0], center[1] + detectionArea[1])
             #cv2.imshow("Corner " + str(i), img)
             #cv2.imshow("Corner hist " + str(i), hist)
 

@@ -44,8 +44,10 @@ if __name__ == '__main__':
     ball_position_previous = (0.0, 0.0)
 
     angle = 0.0
-    angleSpeed = 2
+    angleSpeed = 1.5
     angleRadius = 0.2
+    targetPos = [0.5, 0.5]
+    moveSpeed = 0.05
 
     #jak dlugo ma wykonywany ma byc program
     duration = 20000000
@@ -88,11 +90,25 @@ if __name__ == '__main__':
                         
                     elif event.key == pygame.K_q:
                         killLoop = True
+                        
+                    elif event.key == pygame.K_UP:
+                        targetPos[1] -= moveSpeed
+                        
+                    elif event.key == pygame.K_DOWN:
+                        targetPos[1] += moveSpeed
+                        
+                    elif event.key == pygame.K_RIGHT:
+                        targetPos[0] += moveSpeed
+                        
+                    elif event.key == pygame.K_LEFT:
+                        targetPos[0] -= moveSpeed
+                        
             if killLoop:
                 break
             
             servoController.moveServo(0, round(pidController.x_servo))
             servoController.moveServo(1, -round(pidController.y_servo))
+            #pidController.setTargetValue(targetPos[0], targetPos[1])
             #servoController.moveServo(0, round(angleRadius * math.sin(angle)))
             #servoController.moveServo(1, -round(angleRadius * math.cos(angle)))
             pidController.setTargetValue(0.5 + angleRadius * math.sin(angle), 0.5 + angleRadius * math.cos(angle))
