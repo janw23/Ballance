@@ -44,8 +44,8 @@ if __name__ == '__main__':
     ball_position_previous = (0.0, 0.0)
 
     angle = 0.0
-    angleSpeed = 1.5
-    angleRadius = 0.2
+    angleSpeed = 2.0
+    angleRadius = 0.1
     targetPos = [0.5, 0.5]
     moveSpeed = 0.05
 
@@ -63,6 +63,8 @@ if __name__ == '__main__':
             ball_position_actual = imageProcessor.getBallPosition()
             if ball_position_actual[0] >= 0:
                 pidController.setActualValue(ball_position_actual)
+            else:
+                pidController.setActualValue(pidController.value_target)
                 
             pidController.update(targetDeltaTime)
             ball_position_previous = ball_position_actual
@@ -102,6 +104,10 @@ if __name__ == '__main__':
                         
                     elif event.key == pygame.K_LEFT:
                         targetPos[0] -= moveSpeed
+                        
+                    elif event.key == pygame.K_p:
+                        angleSpeed += 0.1
+                        print("angleSpeed = " + str(angleSpeed))
                         
             if killLoop:
                 break

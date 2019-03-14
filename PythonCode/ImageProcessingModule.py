@@ -24,10 +24,6 @@ class ImageProcessor:
     corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
     detection_image_resolution = (150, 150)
     detection_image_resolution_cropped = (-1, -1)
-    
-    #parametry wykrywania kulki
-    yellow_lower = (20, 40, 40)
-    yellow_upper = (40, 255, 255)
         
     def __init__(self):
         print("ImageProcessor object created")
@@ -47,37 +43,41 @@ class ImageProcessor:
         self.process.daemon = True
         self.process.start()
         
-        
     def StopProcessing(self):    #wydaje polecenie do zatrzymania przetwarzania obrazu
         print("Stopping image processing")
         self.process.terminate()
         
-        
     def ProcessImage(self):    #przetwarza obraz pobierajac klatke z kamery i wykonujac na niej operacje
-        self.videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory w sposob ciagly czyta kolejne klatki z kamery w osobnym watku
+        videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory w sposob ciagly czyta kolejne klatki z kamery w osobnym watku
         time.sleep(1)
+        self.frame_original = videoStream.read()
         
         lastTime = time.time()
-        a = 90
+        a = 190
+        lastID = 0
         while True:
             
             a = a + 1
-            if a > 100:
+            if a > 200:
                 if ImageProcessor.detection_image_resolution_cropped[0] == -1:
                     ImageProcessor.detection_image_resolution_cropped = (np.size(self.frame_original, 0), np.size(self.frame_original, 1))
                 print(str(a * 1.0 / (time.time() - lastTime)))
                 lastTime = time.time()
                 a = 0
             
-            self.frame_original = self.videoStream.read() #zapisywanie otrzymanego zdjecia jako tablicy
-            self.frame_original = copy.copy(self.frame_original)
-            #self.frame_original = cv2.resize(self.frame_original, (200, 200))
-            #self.frame = copy.copy(self.frame_original)
+            #synchronizacja pobierania nowej klatki z czestotliwascia kamery
+            while True:
+                frameGrabbed = videoStream.read()
+                ID = id(frameGrabbed)
+                if ID != lastID:
+                    self.frame_original = frameGrabbed
+                    lastID = ID
+                    break
+                else:
+                    time.sleep(0.01)
             
             self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow
-            #cv2.polylines(self.frame, [self.corners],True,(0,255,255))
-            
-            ImageProcessor.ChangePerspective(self)
+            ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
             self.frame_original = self.frame_original[4:147, 4:147]
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
@@ -85,24 +85,23 @@ class ImageProcessor:
             self.result_y.value = self.result[1] / ImageProcessor.detection_image_resolution_cropped[1]
             
             cv2.imshow("Frame Casted", self.frame_original)
-            #cv2.imshow("Frame", self.frame)
             key = cv2.waitKey(1) & 0xFF
             
             if key == ord("q"):
                 break
             
-        self.videoStream.stop()
+        videoStream.stop()
             
     #znajduje pozycje kulki
     def FindBall(self):
         
-        hsv = cv2.cvtColor(self.frame_original, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, ImageProcessor.yellow_lower, ImageProcessor.yellow_upper)
-        mask = cv2.erode(mask, None, iterations=2)
-        mask = cv2.dilate(mask, None, iterations=2)
+        gray = cv2.cvtColor(self.frame_original, cv2.COLOR_BGR2GRAY)
+        gray = cv2.Canny(gray, 280, 300)
+        gray = cv2.dilate(gray, None, iterations=1)
+        gray = cv2.erode(gray, None, iterations=1)
         
         center = (-666.0, -666.0)
-        M = cv2.moments(mask)
+        M = cv2.moments(gray)
         if M['m00'] > 0:
             center = (M['m10']/M['m00'], M['m01']/M['m00'])
             #cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)
@@ -148,36 +147,6 @@ class ImageProcessor:
             M = cv2.moments(mask)
             if M['m00'] > 0:
                 center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            
-            #sizeX = np.size(img, 0)
-            #sizeY = np.size(img, 1)
-            
-            #neighbour_count_min = 6 * 255    #minimalna liczba sasiadow potrzebna do rozwazenia wierzcholka
-            #neighbour_count = np.zeros((sizeX, sizeY))
-            #neighbour_count = convolve2d(mask, np.ones((3,3),dtype=int),'same')    #zliczanie liczby sasiadow
-            #mask = np.int32(mask)
-            #img[mask >= 255] = [0, 0, 255]
-            
-            #znajdowanie pozycji rogow
-            #mask = np.zeros((sizeX, sizeY))
-            #mask[neighbour_count > neighbour_count_min] = 1
-            
-            #row = np.sum(mask, axis=1)
-            #col = np.sum(mask, axis=0)
-            #row = np.diff(row)
-            #col = np.diff(col)
-            #if dir[0]:
-            #    row[0] = row[-1] = 99999999
-            #    cornerPos[1] = np.argmin(row)
-            #else:
-            #    row[0] = row[-1] = -99999999
-            #    cornerPos[1] = np.argmax(row)
-            #if dir[1]:
-            #    col[0] = col[-1] = 99999999
-            #    cornerPos[0] = np.argmin(col)
-            #else:
-            #    col[0] = col[-1] = -99999999
-            #    cornerPos[0] = np.argmax(col)
             
             corners[i] = (center[0] + detectionArea[0], center[1] + detectionArea[1])
             #cv2.imshow("Corner " + str(i), img)
