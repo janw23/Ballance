@@ -22,7 +22,7 @@ class ImageProcessor:
     camera_framerate = 40
     
     corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
-    detection_image_resolution = (150, 150)
+    detection_image_resolution = (200, 200)
     detection_image_resolution_cropped = (-1, -1)
         
     def __init__(self):
@@ -30,6 +30,11 @@ class ImageProcessor:
         #wartosci-rezultaty przetwarzania obrazu
         self.result_x = Value('f', 0.0)
         self.result_y = Value('f', 0.0)
+        
+        #self.dp = Value('i', 1)
+        #self.minDist = Value('i', 20)
+        #self.param1 = Value('i', 100)
+        #self.param2 = Value('i' , 30)
         
         self.key = Value('i', 0)
         
@@ -78,7 +83,7 @@ class ImageProcessor:
             
             self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
-            self.frame_original = self.frame_original[4:147, 4:147]
+            self.frame_original = self.frame_original[12:189, 12:189]
             self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
             
             self.result_x.value = self.result[0] / ImageProcessor.detection_image_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
@@ -94,17 +99,23 @@ class ImageProcessor:
             
     #znajduje pozycje kulki
     def FindBall(self):
-        
         gray = cv2.cvtColor(self.frame_original, cv2.COLOR_BGR2GRAY)
-        gray = cv2.Canny(gray, 280, 300)
+        gray = cv2.Canny(gray, 350, 370)
+        
         gray = cv2.dilate(gray, None, iterations=1)
         gray = cv2.erode(gray, None, iterations=1)
+        #self.frame_original = gray
+        
+        #circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, self.dp.value, self.minDist.value, param1=self.param1.value, param2=self.param2.value, minRadius=0, maxRadius=5)
+        #if circles is not None:
+        #    for x, y, r in circles[0]:
+        #        cv2.circle(self.frame_original, (x, y), r, (0, 0, 255), -1)
         
         center = (-666.0, -666.0)
         M = cv2.moments(gray)
         if M['m00'] > 0:
             center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            #cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)
+            cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)
             	
         return center
     

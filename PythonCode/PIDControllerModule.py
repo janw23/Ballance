@@ -43,12 +43,12 @@ class PIDController:
     def __init__(self):
         self.servo_pos_limit = (1000, 1000)    #ograniczenia wychylen serw (w skali od 0 do 1000)
         self.value_target = [0.5, 0.5]    #docelowa wartosc, ktora ma byc osiagnieta przez kontroler
-        self.value_actual = [0.0, 0.0]    #aktualna wartosc
+        self.value_actual = [0.5, 0.5]    #aktualna wartosc
         self.value_smoothing = 0.8        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
 
         #wspolczynniki kontroli
         self.KP = 0.9 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.2 * 1000    #wzmocnienie czesci calkujacej
+        self.KI = 0.1 * 1000    #wzmocnienie czesci calkujacej
         self.KD = 0.4 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa

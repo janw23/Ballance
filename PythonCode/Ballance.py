@@ -44,8 +44,8 @@ if __name__ == '__main__':
     ball_position_previous = (0.0, 0.0)
 
     angle = 0.0
-    angleSpeed = 2.0
-    angleRadius = 0.1
+    angleSpeed = 0.2
+    angleRadius = 0.3
     targetPos = [0.5, 0.5]
     moveSpeed = 0.05
 
@@ -108,6 +108,39 @@ if __name__ == '__main__':
                     elif event.key == pygame.K_p:
                         angleSpeed += 0.1
                         print("angleSpeed = " + str(angleSpeed))
+                        
+                    elif event.key == pygame.K_a:
+                        imageProcessor.dp.value += 1
+                        print("dp = " + str(imageProcessor.dp.value))
+                        
+                    elif event.key == pygame.K_z:
+                        imageProcessor.dp.value -= 1
+                        print("dp = " + str(imageProcessor.dp.value))
+                        
+                    elif event.key == pygame.K_s:
+                        imageProcessor.minDist.value += 1
+                        print("minDist = " + str(imageProcessor.minDist.value))
+                        
+                    elif event.key == pygame.K_x:
+                        imageProcessor.minDist.value -= 1
+                        print("minDist = " + str(imageProcessor.minDist.value))
+                        
+                    elif event.key == pygame.K_d:
+                        imageProcessor.param1.value += 1
+                        print("param1 = " + str(imageProcessor.param1.value))
+                        
+                    elif event.key == pygame.K_c:
+                        imageProcessor.param1.value -= 1
+                        print("param1 = " + str(imageProcessor.param1.value))
+                        
+                    elif event.key == pygame.K_f:
+                        imageProcessor.param2.value += 1
+                        print("param2 = " + str(imageProcessor.param2.value))
+                        
+                    elif event.key == pygame.K_v:
+                        imageProcessor.param2.value -= 1
+                        print("param2 = " + str(imageProcessor.param2.value))
+                    
                         
             if killLoop:
                 break
