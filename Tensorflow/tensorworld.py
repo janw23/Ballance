@@ -10,7 +10,14 @@ import math
 
 from tensorflow.contrib.lite.python import interpreter as interpreter_wrapper
 
-model_file = "/home/pi/ballance/Ballance/Tensorflow/ballancenet.tflite"
+model_file = "/home/pi/ballance/ballance_net/ballancenet_conv_2_quant.tflite"
+
+if False:
+    converter = tf.contrib.lite.TocoConverter.from_saved_model(model_file)
+    converter.post_training_quantize=True
+    quant_model = converter.convert()
+    open("ballancenet_conv_2_quant.tflite", "wb").write(quant_model)
+
 interpreter = interpreter_wrapper.Interpreter(model_path=model_file)
 interpreter.allocate_tensors()
 
@@ -29,11 +36,12 @@ while True:
     key = cv2.waitKey(1) & 0xFF
     
     frame_cut = frame[170:231, 170:231]
-    frame_cut = cv2.resize(frame_cut, (30, 30))
+    frame_cut = cv2.resize(frame_cut, (50, 50))
     
     gray = cv2.cvtColor(frame_cut, cv2.COLOR_BGR2GRAY)
     gray = gray / 255.0
     gray = np.expand_dims(gray, axis=0)
+    gray = np.expand_dims(gray, axis=3)
     
     interpreter.set_tensor(input_details[0]['index'], np.float32(gray))
     interpreter.invoke()
@@ -41,7 +49,7 @@ while True:
     output_data = interpreter.get_tensor(output_details[0]['index'])
     results = np.squeeze(output_data)
     
-    pos = (int(round(results[1] * 30)), int(round(results[0] * 30)))
+    pos = (int(round(results[0] * 50)), int(round(results[1] * 50)))
     cv2.circle(frame_cut, pos, 1, (0, 0, 255), -1)
     
     frame_cut = cv2.resize(frame_cut, (200, 200))
