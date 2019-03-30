@@ -33,11 +33,6 @@ class ImageProcessor:
         self.result_x = Value('f', 0.0)
         self.result_y = Value('f', 0.0)
         
-        #self.dp = Value('i', 1)
-        #self.minDist = Value('i', 20)
-        #self.param1 = Value('i', 100)
-        #self.param2 = Value('i' , 30)
-        
         self.key = Value('i', 0)
         
     def getBallPosition(self):    #zwraca pozycje kulki
@@ -139,11 +134,6 @@ class ImageProcessor:
         gray = cv2.dilate(gray, None, iterations=1)
         gray = cv2.erode(gray, None, iterations=1)
         #self.frame_original = gray
-        
-        #circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, self.dp.value, self.minDist.value, param1=self.param1.value, param2=self.param2.value, minRadius=0, maxRadius=5)
-        #if circles is not None:
-        #    for x, y, r in circles[0]:
-        #        cv2.circle(self.frame_original, (x, y), r, (0, 0, 255), -1)
         
         center = (-666.0, -666.0)
         M = cv2.moments(gray)

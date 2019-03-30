@@ -1,18 +1,12 @@
 import time
 import zmq
 import math
+from time import sleep
 import MathModule as MM
+from multiprocessing import Process, Value
 
-from multiprocessing import Process
-from multiprocessing import Value
-
+#program do komunikacji z symulacja w Unity3D
 class SimulationCommunicator:
-    
-    #stale wartosci do sterowania serwami
-    servo_pulse_neutral = (380, 370)    #wartosci pwm dla pozycji neutralnych serw
-    servo_pulse_range = (100, 100)      #zakres wartosci sygnalu pwm dla ruchu serw
-    servo_pos_limit = (250, 250)    #ograniczenia wychylen serw (w skali od 0 do 1000)
-    servo_movement_speed = (2500, 2500)    #szybkosci ruchu serw
     
     def __init__(self):
         print("SimulationCommunicator object created")
@@ -62,10 +56,12 @@ class SimulationCommunicator:
                 message = socket.recv()
                 message = message.split()
                 
-                self.result_x.value = float(message[0]) / 10000
-                self.result_y.value = float(message[1]) / 10000
+                self.result_x.value = float(message[0]) / 10000.0
+                self.result_y.value = float(message[1]) / 10000.0
                     
                 servo_x = self.servo_x.value
                 socket.send_string(str(servo_x) + " " + str(self.servo_y.value))
                 if servo_x == -999:
                     break
+                
+                sleep(0.01)

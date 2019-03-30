@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
+    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
 
     if not simulationMode:
         import ImageProcessingModule as IPM
@@ -16,7 +16,7 @@ if __name__ == '__main__':
     import math
     import MathModule as MM
 
-    #initial setup
+    #wykonanie wstepnych czynnosci
     if not simulationMode:
         imageProcessor = IPM.ImageProcessor()
     else:
@@ -31,44 +31,50 @@ if __name__ == '__main__':
     pygame.init()
     pygame.display.set_mode((100, 100))
 
-    #ball recognition process start
+    #roizpoczynanie procesu wykrywania kulki
     imageProcessor.StartProcessing()
-    sleep(1)    #time for camera to startup
 
-    targetDeltaTime = 1.0 / 40.0    #control loop refresh delta
+    targetDeltaTime = 1.0 / 40.0    #czas jednej iteracji programu sterujacego
     updatedTime = 0.0
-    servoUpdateDeltaTime = 1.0 / 60
+    servoUpdateDeltaTime = 1.0 / 60 #czas odswiezania pozycji serw
     servoUpdatedTime = 0.0
 
     ball_position_actual = (0.0, 0.0)
     ball_position_previous = (0.0, 0.0)
 
+    #parametry trajektorii kulki
     angle = 0.0
-    angleSpeed = 0.2
-    angleRadius = 0.3
+    angleSpeed = 1.0
+    angleRadius = 0.25
     targetPos = [0.5, 0.5]
     moveSpeed = 0.05
+    movementMode = 0
+    modeChangeTimeDelta = 25 #czas po jakim zmieniana jest trajektoria kulki
+    modeChangeTimer = 0.0
 
-    #jak dlugo ma wykonywany ma byc program
+    #jak dlugo wykonywany ma byc program
     duration = 20000000
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
+    #glowna petla programu
     while time.time() <= timeout:
         timeStart = time.perf_counter()
         
+        #oczekiwanie na odpowiedni moment do wykonania programu sterujacego
         if timeStart - updatedTime >= targetDeltaTime:
             updatedTime = time.perf_counter()
             
+            #pobranie pozycji kulki
             ball_position_actual = imageProcessor.getBallPosition()
-            if ball_position_actual[0] >= 0:
-                pidController.setActualValue(ball_position_actual)
-            else:
-                pidController.setActualValue(pidController.value_target)
+            if ball_position_actual[0] >= 0: pidController.setActualValue(ball_position_actual)
+            else: pidController.setActualValue(pidController.value_target)
                 
+            #aktualizacja kontrolera PID
             pidController.update(targetDeltaTime)
             ball_position_previous = ball_position_actual
             
+            #obslugiwanie wejscia z klawiatury
             killLoop = False
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -109,79 +115,79 @@ if __name__ == '__main__':
                         angleSpeed += 0.1
                         print("angleSpeed = " + str(angleSpeed))
                         
-                    elif event.key == pygame.K_a:
-                        imageProcessor.dp.value += 1
-                        print("dp = " + str(imageProcessor.dp.value))
-                        
-                    elif event.key == pygame.K_z:
-                        imageProcessor.dp.value -= 1
-                        print("dp = " + str(imageProcessor.dp.value))
-                        
-                    elif event.key == pygame.K_s:
-                        imageProcessor.minDist.value += 1
-                        print("minDist = " + str(imageProcessor.minDist.value))
-                        
-                    elif event.key == pygame.K_x:
-                        imageProcessor.minDist.value -= 1
-                        print("minDist = " + str(imageProcessor.minDist.value))
-                        
-                    elif event.key == pygame.K_d:
-                        imageProcessor.param1.value += 1
-                        print("param1 = " + str(imageProcessor.param1.value))
-                        
-                    elif event.key == pygame.K_c:
-                        imageProcessor.param1.value -= 1
-                        print("param1 = " + str(imageProcessor.param1.value))
-                        
-                    elif event.key == pygame.K_f:
-                        imageProcessor.param2.value += 1
-                        print("param2 = " + str(imageProcessor.param2.value))
-                        
-                    elif event.key == pygame.K_v:
-                        imageProcessor.param2.value -= 1
-                        print("param2 = " + str(imageProcessor.param2.value))
-                    
+                    elif event.key == pygame.K_o:
+                        angleSpeed -= 0.1
+                        print("angleSpeed = " + str(angleSpeed))
                         
             if killLoop:
                 break
             
+            #ustawianie nowych pozycji serw
             servoController.moveServo(0, round(pidController.x_servo))
             servoController.moveServo(1, -round(pidController.y_servo))
-            #pidController.setTargetValue(targetPos[0], targetPos[1])
-            #servoController.moveServo(0, round(angleRadius * math.sin(angle)))
-            #servoController.moveServo(1, -round(angleRadius * math.cos(angle)))
-            pidController.setTargetValue(0.5 + angleRadius * math.sin(angle), 0.5 + angleRadius * math.cos(angle))
+            
+            #dostepne trajektorie ruchu kulki
+            if movementMode == 0:    #ksztalt osemki
+                targetPos[0] = math.sin(angle)
+                targetPos[1] = math.sin(2.0 * angle)
+            elif movementMode == 1:  #ksztalt okregu
+                targetPos[0] = math.sin(angle)
+                targetPos[1] = math.cos(angle)
+            elif movementMode == 2:   #ksztalt paraboli
+                targetPos[0] = math.sin(angle)
+                targetPos[1] = math.cos(2.0 * angle)
+            elif movementMode == 3:   #ksztalt litery S
+                targetPos[0] = math.sin(angle)
+                targetPos[1] = math.sin(2.0 * angle)
+                if angle > 2:
+                    angleSpeed = -angleSpeed
+                    angle = 2
+                elif angle < -2:
+                    angleSpeed = -angleSpeed
+                    angle = -2
+                    
+            #ustawianie docelowej pozycji kulki
+            pidController.setTargetValue(0.5 + angleRadius * targetPos[0], 0.5 + angleRadius * targetPos[1])
             angle += angleSpeed * targetDeltaTime
+            modeChangeTimer += targetDeltaTime
+            if modeChangeTimer >= modeChangeTimeDelta:
+                modeChangeTimer = 0.0
+                movementMode += 1
+                movementMode = movementMode % 4
             
             #dodawanie wpisow do DataLog'u
-            dataLogger.addRecord("timestamp", time.perf_counter())
-            dataLogger.addRecord("ball_pos_x", ball_position_actual[0])
-            dataLogger.addRecord("ball_pos_y", ball_position_actual[1])
-            #dataLogger.addRecord("ball_vel_x", pidController.ball_velocity_actual[0])
-            #dataLogger.addRecord("ball_vel_y", pidController.ball_velocity_actual[1])
-            dataLogger.addRecord("KP", pidController.KP)
-            dataLogger.addRecord("KI", pidController.KI)
-            dataLogger.addRecord("KD", pidController.KD)
-            dataLogger.addRecord("error_x", pidController.x_error)
-            dataLogger.addRecord("error_y", pidController.y_error)
-            dataLogger.addRecord("error_prev_x", pidController.x_prev_error)
-            dataLogger.addRecord("error_prev_y", pidController.y_prev_error)
-            dataLogger.addRecord("error_sum_x", pidController.x_error_sum)
-            dataLogger.addRecord("error_sum_y", pidController.y_error_sum)
-            dataLogger.addRecord("derivative_x", pidController.x_derivative)
-            dataLogger.addRecord("derivative_y", pidController.y_derivative)
-            dataLogger.addRecord("servo_actual_x", servoController.servo_actual_pos[0])
-            dataLogger.addRecord("servo_actual_y", servoController.servo_actual_pos[1])
-            dataLogger.addRecord("servo_target_x", servoController.servo_target_pos[0])
-            dataLogger.addRecord("servo_target_y", servoController.servo_target_pos[1])
-            #dataLogger.saveRecord()
+            if False:
+                dataLogger.addRecord("timestamp", time.perf_counter())
+                dataLogger.addRecord("ball_pos_x", ball_position_actual[0])
+                dataLogger.addRecord("ball_pos_y", ball_position_actual[1])
+                #dataLogger.addRecord("ball_vel_x", pidController.ball_velocity_actual[0])
+                #dataLogger.addRecord("ball_vel_y", pidController.ball_velocity_actual[1])
+                dataLogger.addRecord("KP", pidController.KP)
+                dataLogger.addRecord("KI", pidController.KI)
+                dataLogger.addRecord("KD", pidController.KD)
+                dataLogger.addRecord("error_x", pidController.x_error)
+                dataLogger.addRecord("error_y", pidController.y_error)
+                dataLogger.addRecord("error_prev_x", pidController.x_prev_error)
+                dataLogger.addRecord("error_prev_y", pidController.y_prev_error)
+                dataLogger.addRecord("error_sum_x", pidController.x_error_sum)
+                dataLogger.addRecord("error_sum_y", pidController.y_error_sum)
+                dataLogger.addRecord("derivative_x", pidController.x_derivative)
+                dataLogger.addRecord("derivative_y", pidController.y_derivative)
+                dataLogger.addRecord("servo_actual_x", servoController.servo_actual_pos[0])
+                dataLogger.addRecord("servo_actual_y", servoController.servo_actual_pos[1])
+                dataLogger.addRecord("servo_target_x", servoController.servo_target_pos[0])
+                dataLogger.addRecord("servo_target_y", servoController.servo_target_pos[1])
+                dataLogger.saveRecord()
             
+        #oczekiwanie na odpowiedni moment do aktualizacji serw
         if time.perf_counter() - servoUpdatedTime >= servoUpdateDeltaTime:
             servoController.update(time.perf_counter() - servoUpdatedTime)
             servoUpdatedTime = time.perf_counter()
             
             if simulationMode:
                 simulationCommunicator.moveServos(servoController.servo_actual_pos)
+                
+        sleep(0.004) #4 milisekundy na odpoczynek :)
             
     print("Stopping program")
     #dataLogger.saveToFile("BallanceDataLog")
