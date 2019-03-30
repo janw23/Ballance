@@ -1,29 +1,21 @@
 import TensorflowProcessingModule as TPM
 
-from picamera.array import PiRGBArray
-from picamera import PiCamera
 import MathModule as MM
-import math
-import time
+import math, time, copy
 import cv2
-import copy
-from scipy.signal import convolve2d
-import matplotlib.pyplot as plt
 
+from multiprocessing import Process, Value
 from imutils.video.pivideostream import PiVideoStream
-import imutils
 import numpy as np
-
-from multiprocessing import Process
-from multiprocessing import Value
  
+#program sluzacy do analizy obrazu z kamery, wykrywania kulki
 class ImageProcessor:
     
-    #stale
+    #parametry kamery
     camera_resolution = (300, 300)
     camera_framerate = 40
     
-    corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu
+    corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu obrazu
     detection_image_resolution = (200, 200)
     detection_image_resolution_cropped = (-1, -1)
         
@@ -32,7 +24,6 @@ class ImageProcessor:
         #wartosci-rezultaty przetwarzania obrazu
         self.result_x = Value('f', 0.0)
         self.result_y = Value('f', 0.0)
-        
         self.key = Value('i', 0)
         
     def getBallPosition(self):    #zwraca pozycje kulki
@@ -47,16 +38,18 @@ class ImageProcessor:
         
     def StopProcessing(self):    #wydaje polecenie do zatrzymania przetwarzania obrazu
         print("Stopping image processing")
+        self.key.value = -666
         self.process.terminate()
         
-    def ProcessImage(self):    #przetwarza obraz pobierajac klatke z kamery i wykonujac na niej operacje
+    def ProcessImage(self):    #przetwarza obraz pobierajac klatke z kamery i wykonujac na niej operacje analizy
         
+        #parametry trackera kulki
         self.ballTracker_pos = [ImageProcessor.detection_image_resolution[0]//2, ImageProcessor.detection_image_resolution[1]//2]
         self.ballTracker_size = (50, 50)
         self.ballTracker_result = [0, 0]
         
         self.tensorflowProcessor = TPM.TensorflowProcessor()
-        videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory w sposob ciagly czyta kolejne klatki z kamery w osobnym watku
+        videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory czyta kolejne klatki z kamery
         
         time.sleep(1)
         self.frame_original = videoStream.read()
@@ -64,8 +57,10 @@ class ImageProcessor:
         lastTime = time.time()
         a = 190
         lastID = 0
+        
         while True:
             
+            #prosty licznik przetworzonych klatek w ciagu sekundy
             a = a + 1
             if a > 200:
                 if ImageProcessor.detection_image_resolution_cropped[0] == -1:
@@ -85,23 +80,23 @@ class ImageProcessor:
                 else:
                     time.sleep(0.01)
             
-            self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow
+            self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
-            self.frame_original = self.frame_original[12:189, 12:189]
-            #self.result = ImageProcessor.FindBall(self)   #znajdowanie kulki na obrazie i zwracanie rezultatu
-            ImageProcessor.UpdateBallTracker(self)
+            self.frame_original = self.frame_original[5:196, 5:196] #przycinanie zdjecia
+            ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
             
-            self.result_x.value = self.ballTracker_result[0] / ImageProcessor.detection_image_resolution_cropped[0]   #ustawianie odpowiedzi w wartosciach dzielonych miedzy procesami
+            #ustawianie znalezionej pozycji kulki w zmiennych dzielonych miedzy procesami
+            self.result_x.value = self.ballTracker_result[0] / ImageProcessor.detection_image_resolution_cropped[0]
             self.result_y.value = self.ballTracker_result[1] / ImageProcessor.detection_image_resolution_cropped[1]
             
             cv2.imshow("Frame Casted", self.frame_original)
             key = cv2.waitKey(1) & 0xFF
-            
-            if key == ord("q"):
+            if key == ord("q") or self.key.value == -666:
                 break
             
         videoStream.stop()
             
+    #aktualizuje tracker kulki
     def UpdateBallTracker(self):
         self.ballTracker_pos[0] = MM.clamp(self.ballTracker_pos[0], 0, ImageProcessor.detection_image_resolution_cropped[0] - self.ballTracker_size[0])
         self.ballTracker_pos[1] = MM.clamp(self.ballTracker_pos[1], 0, ImageProcessor.detection_image_resolution_cropped[1] - self.ballTracker_size[1])
@@ -109,39 +104,24 @@ class ImageProcessor:
         self.ballTracker_pos[0] = int(self.ballTracker_pos[0])
         self.ballTracker_pos[1] = int(self.ballTracker_pos[1])
         
+        #przygotowanie klatki z kamery do analizy
         tracker_frame = self.frame_original[self.ballTracker_pos[1]:self.ballTracker_pos[1]+self.ballTracker_size[1],
                                             self.ballTracker_pos[0]:self.ballTracker_pos[0]+self.ballTracker_size[0]]
         tracker_frame = cv2.cvtColor(tracker_frame, cv2.COLOR_BGR2GRAY)
         
+        #analiza klatki z uzyciem sieci neuronowych
         result = self.tensorflowProcessor.getPrediction(tracker_frame)
         result = (int(round(result[0] * self.ballTracker_size[0])), int(round(result[1] * self.ballTracker_size[1])))
         
         self.ballTracker_result[0] = self.ballTracker_pos[0] + result[0]
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
-        self.frame_original[self.ballTracker_result[1], self.ballTracker_result[0]] = [0, 0, 255]
-        #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 0, 255), -1)
+        #zaznaczanie wizualne pozycji kulki
+        cv2.circle(self.frame_original, tuple(self.ballTracker_result), 2, (0, 0, 255), -1)
         
+        #aktualizacja pozycji trackera
         self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size[0] // 2, 0.4)
         self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], self.ballTracker_result[1] - self.ballTracker_size[1] // 2, 0.4)
-        
-            
-    #znajduje pozycje kulki
-    def FindBall(self):
-        gray = cv2.cvtColor(self.frame_original, cv2.COLOR_BGR2GRAY)
-        gray = cv2.Canny(gray, 350, 370)
-        
-        gray = cv2.dilate(gray, None, iterations=1)
-        gray = cv2.erode(gray, None, iterations=1)
-        #self.frame_original = gray
-        
-        center = (-666.0, -666.0)
-        M = cv2.moments(gray)
-        if M['m00'] > 0:
-            center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            cv2.circle(self.frame_original, (int(center[0]), int(center[1])), 1, (0, 0, 255), -1)
-            	
-        return center
     
     #znajduje pozycje krawedzi plyty
     def FindBoardCorners(self):
@@ -187,7 +167,7 @@ class ImageProcessor:
 
         return np.array(corners, np.int32)
 
-    #zmienia perspektywe obrazu z kamery tak, aby byla dopasowana do "tablicy"
+    #zmienia perspektywe obrazu z kamery tak, aby niewidoczne bylo przechylenie plyty
     def ChangePerspective(self):
         pts = np.array(self.corners, np.float32)
         pts2 = np.float32([[0,0],[self.detection_image_resolution[0],0],[self.detection_image_resolution[0], self.detection_image_resolution[1]], [0,self.detection_image_resolution[1]]])

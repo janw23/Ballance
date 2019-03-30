@@ -19,6 +19,7 @@ class TensorflowProcessor:
         
     def __init__(self):
         print("Creating TensorflowProcessor object")
+        #wczytywanie danego modelu
         self.interpreter = interpreter_wrapper.Interpreter(model_path=TensorflowProcessor.model_path)
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()

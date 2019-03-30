@@ -2,6 +2,7 @@ import MathModule as MM
 
 class PIDController:
     
+    #operacje zmiany pidow
     def increaseKP(self):
         self.KP += 50
         print("KP = " + str(self.KP))
@@ -26,7 +27,7 @@ class PIDController:
         self.KD -= 50
         print("KD = " + str(self.KD))
         
-    #ustawia aktualna wartosc, ktora ma zostac osiagnieta
+    #ustawia aktualna wartosc
     def setActualValue(self, x, y=None):
         if y is not None:
             self.value_actual[0] = MM.lerp(self.value_actual[0], x, self.value_smoothing)
@@ -55,26 +56,29 @@ class PIDController:
         self.x_servo = 0.0
         self.y_servo = 0.0
 
-        #wartosc uchybu redulacji
+        #wartosc bledu
         self.x_error = 0.0
         self.y_error = 0.0
 
-        #wartosci poprzednich uchybow
+        #wartosci poprzednich bledow
         self.x_prev_error = 0.0
         self.y_prev_error = 0.0
 
-        #zmiana uchybu w czasie
+        #zmiana bledu w czasie
         self.x_derivative = 0.0
         self.y_derivative = 0.0
 
-        #calkowita suma uchybow
+        #calkowita suma bledow
         self.x_error_sum = 0.0
         self.y_error_sum = 0.0
 
-    def update(self, deltaTime):    #aktualizowanie PIDow
+    #aktualizuje kontrolea PID
+    def update(self, deltaTime):
+        #liczenie bledu
         self.x_error = self.value_target[0] - self.value_actual[0]
         self.y_error = self.value_target[1] - self.value_actual[1]
 
+        #liczenie pochodnej
         self.x_derivative = (self.x_error - self.x_prev_error) / deltaTime
         self.y_derivative = (self.y_error - self.y_prev_error) / deltaTime
 
@@ -84,15 +88,12 @@ class PIDController:
         self.x_error_sum += self.x_error * deltaTime
         self.y_error_sum += self.y_error * deltaTime
         
-        #zmiana pozycji serw z uwzglednieniem uchybu biezacego, przyszlego oraz przeszlego
+        #zmiana pozycji serw z uwzglednieniem bledu biezacego, przyszlego oraz przeszlego
         self.x_servo = (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * self.KI)
         self.y_servo = (self.y_error * self.KP) + (self.y_derivative * self.KD) + (self.y_error_sum * self.KI)
         
-        self.x_servo = min(self.servo_pos_limit[0], max(-self.servo_pos_limit[0], self.x_servo))
-        self.y_servo = min(self.servo_pos_limit[1], max(-self.servo_pos_limit[1], self.y_servo))
-
-        self.x_error_sum = max(min(self.x_error_sum, 1.0), -1.0) * 0.98
-        self.y_error_sum = max(min(self.y_error_sum, 1.0), -1.0) * 0.98
-
-
-
+        self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
+        self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
+        
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.98
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.98

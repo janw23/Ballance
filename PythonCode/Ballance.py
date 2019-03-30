@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
+    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
 
     if not simulationMode:
         import ImageProcessingModule as IPM
@@ -44,8 +44,9 @@ if __name__ == '__main__':
 
     #parametry trajektorii kulki
     angle = 0.0
-    angleSpeed = 1.0
+    angleSpeed = 0.9
     angleRadius = 0.25
+    angleRadiusFactor = 0.0
     targetPos = [0.5, 0.5]
     moveSpeed = 0.05
     movementMode = 0
@@ -53,7 +54,7 @@ if __name__ == '__main__':
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
-    duration = 20000000
+    duration = 8000000
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -147,11 +148,15 @@ if __name__ == '__main__':
                     angle = -2
                     
             #ustawianie docelowej pozycji kulki
-            pidController.setTargetValue(0.5 + angleRadius * targetPos[0], 0.5 + angleRadius * targetPos[1])
+            pidController.setTargetValue(0.5 + angleRadiusFactor * angleRadius * targetPos[0], 0.5 + angleRadiusFactor * angleRadius * targetPos[1])
             angle += angleSpeed * targetDeltaTime
+            angleRadiusFactor += 0.25 * targetDeltaTime
+            angleRadiusFactor = min(angleRadiusFactor, 1.0)
+            
             modeChangeTimer += targetDeltaTime
             if modeChangeTimer >= modeChangeTimeDelta:
                 modeChangeTimer = 0.0
+                angleRadiusFactor = 0.0
                 movementMode += 1
                 movementMode = movementMode % 4
             
@@ -191,5 +196,5 @@ if __name__ == '__main__':
             
     print("Stopping program")
     #dataLogger.saveToFile("BallanceDataLog")
-    if simulationMode:
-        simulationCommunicator.StopProcessing()
+    if simulationMode: simulationCommunicator.StopProcessing()
+    else: imageProcessor.StopProcessing()
