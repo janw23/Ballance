@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
+    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
 
     if not simulationMode:
         import ImageProcessingModule as IPM
