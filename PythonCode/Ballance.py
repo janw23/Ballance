@@ -120,6 +120,30 @@ if __name__ == '__main__':
                         angleSpeed -= 0.1
                         print("angleSpeed = " + str(angleSpeed))
                         
+                    elif event.key == pygame.K_a:
+                        imageProcessor.dp.value += 0.1
+                        print("dp = " + str(imageProcessor.dp.value))
+                        
+                    elif event.key == pygame.K_z:
+                        imageProcessor.dp.value -= 0.1
+                        print("dp = " + str(imageProcessor.dp.value))
+                        
+                    elif event.key == pygame.K_s:
+                        imageProcessor.param1.value += 10
+                        print("param1 = " + str(imageProcessor.param1.value))
+                        
+                    elif event.key == pygame.K_x:
+                        imageProcessor.param1.value -= 10
+                        print("param1 = " + str(imageProcessor.param1.value))
+                        
+                    elif event.key == pygame.K_d:
+                        imageProcessor.param2.value += 1
+                        print("param2 = " + str(imageProcessor.param2.value))
+                        
+                    elif event.key == pygame.K_c:
+                        imageProcessor.param2.value -= 1
+                        print("param2 = " + str(imageProcessor.param2.value))
+                        
             if killLoop:
                 break
             

@@ -12,7 +12,7 @@ import numpy as np
 class ImageProcessor:
     
     #parametry kamery
-    camera_resolution = (300, 300)
+    camera_resolution = (304, 304)
     camera_framerate = 40
     
     corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu obrazu
@@ -25,6 +25,10 @@ class ImageProcessor:
         self.result_x = Value('f', 0.0)
         self.result_y = Value('f', 0.0)
         self.key = Value('i', 0)
+        
+        self.dp = Value('f', 1.0)
+        self.param1 = Value('i', 400)
+        self.param2 = Value('i', 9)
         
     def getBallPosition(self):    #zwraca pozycje kulki
         return (self.result_x.value, self.result_y.value)
@@ -45,7 +49,7 @@ class ImageProcessor:
         
         #parametry trackera kulki
         self.ballTracker_pos = [ImageProcessor.detection_image_resolution[0]//2, ImageProcessor.detection_image_resolution[1]//2]
-        self.ballTracker_size = (50, 50)
+        self.ballTracker_size = 50
         self.ballTracker_result = [0, 0]
         
         self.tensorflowProcessor = TPM.TensorflowProcessor()
@@ -57,6 +61,9 @@ class ImageProcessor:
         lastTime = time.time()
         a = 190
         lastID = 0
+        
+        saveCounter = 0
+        saveCount = 0
         
         while True:
             
@@ -80,15 +87,23 @@ class ImageProcessor:
                 else:
                     time.sleep(0.01)
             
+            #klatka przeznaczona do debugowania
+            #self.frame_debug = copy.copy(self.frame_original)
+            
             self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
-            self.frame_original = self.frame_original[5:196, 5:196] #przycinanie zdjecia
+            self.frame_original = self.frame_original[2:199, 2:199] #przycinanie zdjecia
             ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
             
             #ustawianie znalezionej pozycji kulki w zmiennych dzielonych miedzy procesami
             self.result_x.value = self.ballTracker_result[0] / ImageProcessor.detection_image_resolution_cropped[0]
             self.result_y.value = self.ballTracker_result[1] / ImageProcessor.detection_image_resolution_cropped[1]
             
+            #cv2.imshow("Frame debug", self.frame_debug)
+            if saveCounter < saveCount:
+                cv2.imwrite("Frame" + str(saveCounter) + ".png", self.frame_original)
+                saveCounter += 1
+                
             cv2.imshow("Frame Casted", self.frame_original)
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q") or self.key.value == -666:
@@ -98,20 +113,20 @@ class ImageProcessor:
             
     #aktualizuje tracker kulki
     def UpdateBallTracker(self):
-        self.ballTracker_pos[0] = MM.clamp(self.ballTracker_pos[0], 0, ImageProcessor.detection_image_resolution_cropped[0] - self.ballTracker_size[0])
-        self.ballTracker_pos[1] = MM.clamp(self.ballTracker_pos[1], 0, ImageProcessor.detection_image_resolution_cropped[1] - self.ballTracker_size[1])
+        self.ballTracker_pos[0] = MM.clamp(self.ballTracker_pos[0], 0, ImageProcessor.detection_image_resolution_cropped[0] - self.ballTracker_size)
+        self.ballTracker_pos[1] = MM.clamp(self.ballTracker_pos[1], 0, ImageProcessor.detection_image_resolution_cropped[1] - self.ballTracker_size)
         
         self.ballTracker_pos[0] = int(self.ballTracker_pos[0])
         self.ballTracker_pos[1] = int(self.ballTracker_pos[1])
         
         #przygotowanie klatki z kamery do analizy
-        tracker_frame = self.frame_original[self.ballTracker_pos[1]:self.ballTracker_pos[1]+self.ballTracker_size[1],
-                                            self.ballTracker_pos[0]:self.ballTracker_pos[0]+self.ballTracker_size[0]]
+        tracker_frame = self.frame_original[self.ballTracker_pos[1]:self.ballTracker_pos[1]+self.ballTracker_size,
+                                            self.ballTracker_pos[0]:self.ballTracker_pos[0]+self.ballTracker_size]
         tracker_frame = cv2.cvtColor(tracker_frame, cv2.COLOR_BGR2GRAY)
         
         #analiza klatki z uzyciem sieci neuronowych
-        result = self.tensorflowProcessor.getPrediction(tracker_frame)
-        result = (int(round(result[0] * self.ballTracker_size[0])), int(round(result[1] * self.ballTracker_size[1])))
+        result = self.tensorflowProcessor.getBallPosition(tracker_frame)
+        result = np.round(result * self.ballTracker_size).astype("int")
         
         self.ballTracker_result[0] = self.ballTracker_pos[0] + result[0]
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
@@ -120,8 +135,8 @@ class ImageProcessor:
         cv2.circle(self.frame_original, tuple(self.ballTracker_result), 2, (0, 0, 255), -1)
         
         #aktualizacja pozycji trackera
-        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size[0] // 2, 0.4)
-        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], self.ballTracker_result[1] - self.ballTracker_size[1] // 2, 0.4)
+        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.4)
+        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], self.ballTracker_result[1] - self.ballTracker_size // 2, 0.4)
     
     #znajduje pozycje krawedzi plyty
     def FindBoardCorners(self):
@@ -131,39 +146,36 @@ class ImageProcessor:
                                        round(self.corner_detecton_area[2] * self.camera_resolution[0]),
                                        round(self.corner_detecton_area[3] * self.camera_resolution[1]))
         for i in range(4):
+            flipX = False
+            flipY = False
             detectionArea = list(corner_detection_area_pixels)    #domyslnie lewy gorny
             if i == 1 or i == 2:
                 detectionArea[0] = self.camera_resolution[0] - detectionArea[0] - detectionArea[2]
+                flipX = True
             if i == 3 or i == 2:
                 detectionArea[1] = self.camera_resolution[1] - detectionArea[1] - detectionArea[3]
+                flipY = True
                 
             rect = (detectionArea[0], detectionArea[1], detectionArea[0] + detectionArea[2], detectionArea[1] + detectionArea[3])
-            #cv2.rectangle(self.frame, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 1);
+            #cv2.rectangle(self.frame_debug, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 1);
         
-            img = self.frame_original[rect[1]:rect[3]+1, rect[0]:rect[2]+1]
-            #img = copy.copy(img)
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            #hist = cv2.calcHist([hsv], [1, 2], None, [256, 256], [0, 256, 0, 256])
+            img = self.frame_original[rect[1]:rect[3], rect[0]:rect[2]]
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = cv2.resize(img, (40, 40))
             
-            if i == 0: dir = (False, False)
-            elif i == 1: dir = (False, True)
-            elif i == 2: dir = (True, True)
-            elif i == 3: dir = (True, False)
-            
-            lower = (0, 0, 200)
-            upper = (180, 30, 255)
-            mask = cv2.inRange(hsv, lower, upper)
-            mask = cv2.dilate(mask, None, iterations=1)
-            #mask = cv2.erode(mask, None, iterations=1)
-            
-            center = (0, 0)
-            M = cv2.moments(mask)
-            if M['m00'] > 0:
-                center = (M['m10']/M['m00'], M['m01']/M['m00'])
-            
-            corners[i] = (center[0] + detectionArea[0], center[1] + detectionArea[1])
+            if flipX and flipY: img = cv2.flip(img, -1)
+            elif flipX: img = cv2.flip(img, 1)
+            elif flipY: img = cv2.flip(img, 0)
             #cv2.imshow("Corner " + str(i), img)
-            #cv2.imshow("Corner hist " + str(i), hist)
+            
+            result = self.tensorflowProcessor.getCornerPosition(img)
+            corner = np.round(result * 40.0).astype("int")
+            
+            if flipX and flipY: corners[i] = (40 - corner[0] + detectionArea[0], 40 - corner[1] + detectionArea[1])
+            elif flipX: corners[i] = (40 - corner[0] + detectionArea[0], corner[1] + detectionArea[1])
+            elif flipY: corners[i] = (corner[0] + detectionArea[0], 40 - corner[1] + detectionArea[1])
+            else: corners[i] = (corner[0] + detectionArea[0], corner[1] + detectionArea[1])
+            #cv2.circle(self.frame_debug, corners[i], 1, (0, 0, 255), 1)
 
         return np.array(corners, np.int32)
 
