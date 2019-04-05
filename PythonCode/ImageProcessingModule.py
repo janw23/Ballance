@@ -26,10 +26,6 @@ class ImageProcessor:
         self.result_y = Value('f', 0.0)
         self.key = Value('i', 0)
         
-        self.dp = Value('f', 1.0)
-        self.param1 = Value('i', 400)
-        self.param2 = Value('i', 9)
-        
     def getBallPosition(self):    #zwraca pozycje kulki
         return (self.result_x.value, self.result_y.value)
         
@@ -49,7 +45,7 @@ class ImageProcessor:
         
         #parametry trackera kulki
         self.ballTracker_pos = [ImageProcessor.detection_image_resolution[0]//2, ImageProcessor.detection_image_resolution[1]//2]
-        self.ballTracker_size = 50
+        self.ballTracker_size = 40
         self.ballTracker_result = [0, 0]
         
         self.tensorflowProcessor = TPM.TensorflowProcessor()
@@ -132,7 +128,7 @@ class ImageProcessor:
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
         #zaznaczanie wizualne pozycji kulki
-        cv2.circle(self.frame_original, tuple(self.ballTracker_result), 2, (0, 0, 255), -1)
+        #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 2, (0, 0, 255), -1)
         
         #aktualizacja pozycji trackera
         self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.4)

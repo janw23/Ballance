@@ -8,7 +8,7 @@ import tensorflow as tf
 class TensorflowProcessor:
     
     #sciezka do uzywanego modelu
-    ball_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_conv_2_quant.tflite"
+    ball_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_conv_3_quant.tflite"
     corner_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_boardcorner_conv_2_quant.tflite"
     
     #funkcja generujaca zoptymalizowany model
@@ -29,7 +29,7 @@ class TensorflowProcessor:
         self.ball_detector_output_details = self.ball_detector_interpreter.get_output_details()
         
         #wczytywanie modelu do wykrywania krawedzi plyty
-        print("Loading ball detection tflite model")
+        print("Loading corner detection tflite model")
         self.corner_detector_interpreter = interpreter_wrapper.Interpreter(model_path=TensorflowProcessor.corner_detector_model_path)
         self.corner_detector_interpreter.allocate_tensors()
         self.corner_detector_input_details = self.corner_detector_interpreter.get_input_details()
