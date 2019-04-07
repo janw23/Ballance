@@ -7,12 +7,14 @@ import cv2
 from multiprocessing import Process, Value
 from imutils.video.pivideostream import PiVideoStream
 import numpy as np
+
+import profile
  
 #program sluzacy do analizy obrazu z kamery, wykrywania kulki
 class ImageProcessor:
     
     #parametry kamery
-    camera_resolution = (304, 304)
+    camera_resolution = (256, 256)
     camera_framerate = 40
     
     corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu obrazu
@@ -35,6 +37,7 @@ class ImageProcessor:
         self.process = Process(target=ImageProcessor.ProcessImage, args=(self,))
         self.process.daemon = True
         self.process.start()
+        #ImageProcessor.ProcessImage(self)
         
     def StopProcessing(self):    #wydaje polecenie do zatrzymania przetwarzania obrazu
         print("Stopping image processing")
@@ -100,10 +103,10 @@ class ImageProcessor:
                 cv2.imwrite("Frame" + str(saveCounter) + ".png", self.frame_original)
                 saveCounter += 1
                 
-            cv2.imshow("Frame Casted", self.frame_original)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q") or self.key.value == -666:
-                break
+            #cv2.imshow("Frame Casted", self.frame_original)
+            #key = cv2.waitKey(1) & 0xFF
+            #if key == ord("q") or self.key.value == -666:
+            #    break
             
         videoStream.stop()
             
@@ -128,11 +131,7 @@ class ImageProcessor:
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
         #zaznaczanie wizualne pozycji kulki
-        #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 2, (0, 0, 255), -1)
-        
-        #aktualizacja pozycji trackera
-        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.4)
-        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], self.ballTracker_result[1] - self.ballTracker_size // 2, 0.4)
+        #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 0, 255), -1)
     
     #znajduje pozycje krawedzi plyty
     def FindBoardCorners(self):
@@ -157,7 +156,7 @@ class ImageProcessor:
         
             img = self.frame_original[rect[1]:rect[3], rect[0]:rect[2]]
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            img = cv2.resize(img, (40, 40))
+            img = cv2.resize(img, (40, 40), interpolation=cv2.INTER_NEAREST)
             
             if flipX and flipY: img = cv2.flip(img, -1)
             elif flipX: img = cv2.flip(img, 1)
