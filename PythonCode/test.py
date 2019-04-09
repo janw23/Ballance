@@ -1,14 +1,5 @@
-if __name__ == "__main__":
-    import sys
-    import pstats
-    import io
+import numpy as np
 
-    s = io.StringIO()
+corners = np.zeros((4, 2), dtype=np.int32)
 
-    stats = pstats.Stats("/home/pi/ballance/Ballance/PythonCode/stats", stream=s)
-    stats.strip_dirs()
-    stats.sort_stats('tottime')
-    stats.print_stats()
-    
-    with open('ballancestats.txt', 'w+') as f:
-        f.write(s.getvalue())
+print(str(corners))

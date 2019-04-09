@@ -4,7 +4,7 @@ import MathModule as MM
 import math, time, copy
 import cv2
 
-from multiprocessing import Process, Value
+from multiprocessing import Process, Value, Array, RawValue, RawArray
 from imutils.video.pivideostream import PiVideoStream
 import numpy as np
 
@@ -20,13 +20,20 @@ class ImageProcessor:
     corner_detecton_area = (0.08, 0.08, 0.14, 0.14) #prostakat, w ktorym szukana jest krawedz plyty, jest on powielany dla kazdego rogu obrazu
     detection_image_resolution = (200, 200)
     detection_image_resolution_cropped = (-1, -1)
+    
+    #rozmiar bitmapy przeszkod
+    obstacle_map_size = 50
         
     def __init__(self):
         print("ImageProcessor object created")
         #wartosci-rezultaty przetwarzania obrazu
-        self.result_x = Value('f', 0.0)
-        self.result_y = Value('f', 0.0)
+        self.result_x = RawValue('f', 0.0)
+        self.result_y = RawValue('f', 0.0)
         self.key = Value('i', 0)
+        
+        self.obstacle_map = RawArray('i', ImageProcessor.obstacle_map_size**2)
+        self.obstacle_map_np = np.frombuffer(self.obstacle_map, dtype=np.int32).reshape(ImageProcessor.obstacle_map_size**2)
+        self.obstacle_map_doupdate = False
         
     def getBallPosition(self):    #zwraca pozycje kulki
         return (self.result_x.value, self.result_y.value)
@@ -93,6 +100,7 @@ class ImageProcessor:
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
             self.frame_original = self.frame_original[2:199, 2:199] #przycinanie zdjecia
             ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
+            ImageProcessor.UpdateObstacleMap(self)
             
             #ustawianie znalezionej pozycji kulki w zmiennych dzielonych miedzy procesami
             self.result_x.value = self.ballTracker_result[0] / ImageProcessor.detection_image_resolution_cropped[0]
@@ -132,18 +140,22 @@ class ImageProcessor:
         
         #zaznaczanie wizualne pozycji kulki
         #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 0, 255), -1)
+        
+        #aktualizacja pozycji trackera
+        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.7)
+        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], self.ballTracker_result[1] - self.ballTracker_size // 2, 0.7)
     
     #znajduje pozycje krawedzi plyty
     def FindBoardCorners(self):
-        corners = [(0, 0), (0, 0), (0, 0), (0, 0)]
-        corner_detection_area_pixels = (round(self.corner_detecton_area[0] * self.camera_resolution[0]),
+        corners = np.zeros((4, 2), dtype=np.int32)
+        corner_detection_area_pixels = [round(self.corner_detecton_area[0] * self.camera_resolution[0]),
                                        round(self.corner_detecton_area[1] * self.camera_resolution[1]),
                                        round(self.corner_detecton_area[2] * self.camera_resolution[0]),
-                                       round(self.corner_detecton_area[3] * self.camera_resolution[1]))
+                                       round(self.corner_detecton_area[3] * self.camera_resolution[1])]
         for i in range(4):
             flipX = False
             flipY = False
-            detectionArea = list(corner_detection_area_pixels)    #domyslnie lewy gorny
+            detectionArea = copy.copy(corner_detection_area_pixels)    #domyslnie lewy gorny
             if i == 1 or i == 2:
                 detectionArea[0] = self.camera_resolution[0] - detectionArea[0] - detectionArea[2]
                 flipX = True
@@ -172,12 +184,23 @@ class ImageProcessor:
             else: corners[i] = (corner[0] + detectionArea[0], corner[1] + detectionArea[1])
             #cv2.circle(self.frame_debug, corners[i], 1, (0, 0, 255), 1)
 
-        return np.array(corners, np.int32)
+        return corners
 
     #zmienia perspektywe obrazu z kamery tak, aby niewidoczne bylo przechylenie plyty
     def ChangePerspective(self):
         pts = np.array(self.corners, np.float32)
-        pts2 = np.float32([[0,0],[self.detection_image_resolution[0],0],[self.detection_image_resolution[0], self.detection_image_resolution[1]], [0,self.detection_image_resolution[1]]])
+        res = self.detection_image_resolution
+        pts2 = np.float32([[0,0],[res[0],0],[res[0], res[1]], [0, res[1]]])
 
         M = cv2.getPerspectiveTransform(pts, pts2)
-        self.frame_original = cv2.warpPerspective(self.frame_original, M, self.detection_image_resolution)
+        self.frame_original = cv2.warpPerspective(self.frame_original, M, res)
+        
+    #aktualizuje mape przeszkod na plycie
+    def UpdateObstacleMap(self):
+        self.obstacle_map_doupdate = not self.obstacle_map_doupdate
+        if self.obstacle_map_doupdate:
+            frame = cv2.resize(self.frame_original, (ImageProcessor.obstacle_map_size, ImageProcessor.obstacle_map_size), interpolation=cv2.INTER_NEAREST)
+            frame = np.int32(frame)
+            frame = 2 * frame[...,2] - frame[...,1] - frame[...,0]
+            np.copyto(self.obstacle_map_np, frame.ravel())
+            #self.obstacle_map = frame[...,2].ravel()

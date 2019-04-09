@@ -6,6 +6,7 @@ if __name__ == '__main__':
     import ServoControllerModule as SCM
     import PIDControllerModule as PIDCM
     import DataLoggerModule as DLM
+    import PathPlannerModule as PPM
 
     if simulationMode:
         import SimulationCommunicatorModule as SimCM
@@ -23,6 +24,7 @@ if __name__ == '__main__':
         simulationCommunicator = SimCM.SimulationCommunicator()
         imageProcessor = simulationCommunicator
     servoController = SCM.ServoController()
+    pathPlanner = PPM.PathPlanner()
         
     dataLogger = DLM.DataLogger()
     pidController = PIDCM.PIDController()
@@ -33,11 +35,14 @@ if __name__ == '__main__':
 
     #roizpoczynanie procesu wykrywania kulki
     imageProcessor.StartProcessing()
+    pathPlanner.setFrameArray(imageProcessor.obstacle_map)
 
     targetDeltaTime = 1.0 / 40.0    #czas jednej iteracji programu sterujacego
     updatedTime = 0.0
     servoUpdateDeltaTime = 1.0 / 60 #czas odswiezania pozycji serw
     servoUpdatedTime = 0.0
+    pathUpdateDeltaTime = 1.0 / 10 #czas odswiezania planowania sciezki
+    pathUpdatedTime = 0.0
 
     ball_position_actual = (0.0, 0.0)
     ball_position_previous = (0.0, 0.0)
@@ -183,6 +188,14 @@ if __name__ == '__main__':
                 dataLogger.addRecord("servo_target_x", servoController.servo_target_pos[0])
                 dataLogger.addRecord("servo_target_y", servoController.servo_target_pos[1])
                 dataLogger.saveRecord()
+            
+        #oczekiwanie na odpowiedni moment do aktualizacji planowania sciezki
+        if time.perf_counter() - pathUpdatedTime >= pathUpdateDeltaTime:
+            pathPlanner.updateObstacleMap()
+            pathUpdatedTime = time.perf_counter()
+            
+            if simulationMode:
+                simulationCommunicator.moveServos(servoController.servo_actual_pos)
             
         #oczekiwanie na odpowiedni moment do aktualizacji serw
         if time.perf_counter() - servoUpdatedTime >= servoUpdateDeltaTime:
