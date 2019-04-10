@@ -1,5 +1,6 @@
 #PRZYDATNE FUNKCJE MATEMATYCZNE
 import math
+import heapq
 
 #zwrca znak liczby
 def sign(num):
@@ -36,3 +37,21 @@ def clamp(num, _min, _max):
     if num > _max: return _max
     elif num < _min: return _min
     return num
+
+#kolejka priorytetowa
+class PriorityQueue:
+    def __init__(self):
+        self.elements = []
+        
+    #dodaje element do kolejki
+    def push(self, item, priority):
+        heapq.heappush(self.elements, (priority, item))
+        
+    #zdejmuje i zwraca element z poczatku kolejki
+    def pop(self):
+        return heapq.heappop(self.elements)[1]
+    
+    #czy kolejka jest pusta?
+    def empty(self):
+        return len(self.elements) == 0
+        
