@@ -49,12 +49,12 @@ class PIDController:
         self.servo_pos_limit = (1000, 1000)    #ograniczenia wychylen serw (w skali od 0 do 1000)
         self.value_target = [0.5, 0.5]    #docelowa wartosc, ktora ma byc osiagnieta przez kontroler
         self.value_actual = [0.5, 0.5]    #aktualna wartosc
-        self.value_smoothing = 0.5        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
+        self.value_smoothing = 0.7        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
 
         #wspolczynniki kontroli
         self.KP = 1.45 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.5 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 0.55 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KI = 0.7 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 0.45 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -81,6 +81,8 @@ class PIDController:
         #liczenie bledu
         self.x_error = self.value_target[0] - self.value_actual[0]
         self.y_error = self.value_target[1] - self.value_actual[1]
+        
+        #print("Error = ( " + str(self.x_error) + "; " + str(self.y_error) + ")")
 
         #liczenie pochodnej
         self.x_derivative = (self.x_error - self.x_prev_error) / deltaTime
@@ -99,5 +101,5 @@ class PIDController:
         self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
         self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
         
-        self.x_error_sum = MM.clamp(self.x_error_sum, -9.0, 9.0) * 0.995
-        self.y_error_sum = MM.clamp(self.y_error_sum, -9.0, 9.0) * 0.995
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.99
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.99

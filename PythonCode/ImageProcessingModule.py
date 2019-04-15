@@ -22,7 +22,8 @@ class ImageProcessor:
     detection_image_resolution_cropped = (-1, -1)
     
     #rozmiar bitmapy przeszkod
-    obstacle_map_size = 30
+    obstacle_map_size = 25
+    obstacle_map_update_delta = 40
         
     def __init__(self):
         print("ImageProcessor object created")
@@ -33,7 +34,7 @@ class ImageProcessor:
         
         self.obstacle_map = RawArray('i', ImageProcessor.obstacle_map_size**2)
         self.obstacle_map_np = np.frombuffer(self.obstacle_map, dtype=np.int32).reshape(ImageProcessor.obstacle_map_size**2)
-        self.obstacle_map_doupdate = False
+        self.obstacle_map_update_counter = 0
         
     def getBallPosition(self):    #zwraca pozycje kulki
         return (self.result_x.value, self.result_y.value)
@@ -197,8 +198,9 @@ class ImageProcessor:
         
     #aktualizuje mape przeszkod na plycie
     def UpdateObstacleMap(self):
-        self.obstacle_map_doupdate = not self.obstacle_map_doupdate
-        if self.obstacle_map_doupdate:
+        self.obstacle_map_update_counter += 1
+        if self.obstacle_map_update_counter >= ImageProcessor.obstacle_map_update_delta:
+            self.obstacle_map_update_counter = 0
             frame = cv2.resize(self.frame_original, (ImageProcessor.obstacle_map_size, ImageProcessor.obstacle_map_size), interpolation=cv2.INTER_NEAREST)
             frame = np.int32(frame)
             frame = 2 * frame[...,2] - frame[...,1] - frame[...,0]

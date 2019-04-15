@@ -155,8 +155,11 @@ if __name__ == '__main__':
                     angleSpeed = -angleSpeed
                     angle = -2
                     
+            targetPos[0] = 0.5 + angleRadiusFactor * angleRadius * targetPos[0]
+            targetPos[1] = 0.5 + angleRadiusFactor * angleRadius * targetPos[1]
             #ustawianie docelowej pozycji kulki
-            #pidController.setTargetValue(0.5 + angleRadiusFactor * angleRadius * targetPos[0], 0.5 + angleRadiusFactor * angleRadius * targetPos[1])
+            #pidController.setTargetValue(targetPos[0], targetPos[1])
+            #pathPlanner.setTargetPosition(tuple(targetPos))
             angle += angleSpeed * targetDeltaTime
             angleRadiusFactor += 0.25 * targetDeltaTime
             angleRadiusFactor = min(angleRadiusFactor, 1.0)

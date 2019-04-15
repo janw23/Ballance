@@ -10,19 +10,20 @@ import copy
 class PathPlanner:
     
     
-    obstacle_map_size = 30    #rozmiar mapy przeszkod
-    obstacle_map_update_delta = 2    #co ile sekund odswiezana ma byc mapa przeszkod?
+    obstacle_map_size = 25    #rozmiar mapy przeszkod
+    obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
     
     def __init__(self):
         print("PathPlanner object created")
         
         self.obstacle_map = None
         self.path = None
+        self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.ball_pos_x = RawValue('f', 0.5)
         self.ball_pos_y = RawValue('f', 0.5)
-        self.target_pos_x = RawValue('f', 0.2)
-        self.target_pos_y = RawValue('f', 0.2)
+        self.target_pos_x = RawValue('f', 0.25)
+        self.target_pos_y = RawValue('f', 0.25)
         self.path_x = RawValue('f', 0.5)
         self.path_y = RawValue('f', 0.5)
         
@@ -56,9 +57,22 @@ class PathPlanner:
     def updateObstacleMap(self, _frame_array):
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
-        frame = cv2.inRange(frame, 70, 255)
+        frame = cv2.inRange(frame, 50, 255)
         #frame = cv2.dilate(frame, None, iterations=1)
         self.obstacle_map = frame
+        
+        #aktualizacja mapy bliskosci przeszkod
+        self.proximity_map.fill(0)
+        size = PathPlanner.obstacle_map_size - 1
+        sides = ((1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1))
+        for x in range(1, size):
+            for y in range(1, size):
+                if frame[x, y] > 0:
+                    for side in sides:
+                        self.proximity_map[x + side[0], y + side[1]] += 1
+        
+        np.clip(self.proximity_map, 0, 1, self.proximity_map)
+        self.proximity_map *= 10000
         
     #aktualizuje sciezke przy uzyciu algorytmu A*
     def UpdatePath(self):
@@ -93,7 +107,7 @@ class PathPlanner:
                     if u not in cost or new_cost < cost[u]:
                         cost[u] = new_cost
                         center = PathPlanner.obstacle_map_size // 2
-                        que.push(u, new_cost + MM.sqrMagnitude(v[0] - u[0], v[1] - u[1]) + MM.sqrMagnitude(center - u[0], center - u[1]) * 0.001)
+                        que.push(u, new_cost + MM.sqrMagnitude(v[0] - u[0], v[1] - u[1]) + self.proximity_map[u[0], u[1]] + int(MM.sqrMagnitude(center - u[0], center - u[1]) * 0.08))
                         visited_from[u] = v
                         
         #timeFinish = time.perf_counter()
@@ -106,12 +120,12 @@ class PathPlanner:
                 v = visited_from[v]
             path.append(start)
         else:
-            time.sleep(0.1)
+            time.sleep(0.05)
             path.append(end)
         
         self.path = path
         
-        index = min(len(path), 6) - 1
+        index = min(len(path)-1, 3)
         self.path_x.value = float(path[index][1]) / PathPlanner.obstacle_map_size
         self.path_y.value = float(path[index][0]) / PathPlanner.obstacle_map_size
         
