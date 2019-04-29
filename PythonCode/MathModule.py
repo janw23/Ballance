@@ -22,6 +22,17 @@ def magnitude(x, y=None):
     if y is not None: return math.sqrt(x*x + y*y)
     return math.sqrt(x[0]*x[0] + x[1]*x[1])
 
+#zwraca znormalizowany wektor [x, y]
+def normalized(x, y=None):
+    if y is not None:
+        if x == 0 and y == 0: return (0, 0)
+        mag = magnitude(x, y)
+        return (x/mag, y/mag)
+    else:
+        if x[0] == 0 and x[1] == 0: return (0, 0)
+        mag = magnitude(x)
+        return (x[0]/mag, x[1]/mag)
+
 #zwraca roznice kwadratowa miedzy target a value
 def errorsquare(target, value):
     size = len(target)

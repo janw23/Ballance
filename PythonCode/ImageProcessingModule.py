@@ -22,7 +22,7 @@ class ImageProcessor:
     detection_image_resolution_cropped = (-1, -1)
     
     #rozmiar bitmapy przeszkod
-    obstacle_map_size = 25
+    obstacle_map_size = 40
     obstacle_map_update_delta = 40
         
     def __init__(self):

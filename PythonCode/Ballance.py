@@ -50,7 +50,9 @@ if __name__ == '__main__':
     angleSpeed = 0.9
     angleRadius = 0.25
     angleRadiusFactor = 0.0
-    targetPos = [0.5, 0.5]
+    path_targets = [(0.15, 0.15), (0.85, 0.85)]
+    path_target_index = 0
+    targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
     movementMode = 0
     modeChangeTimeDelta = 25 #czas po jakim zmieniana jest trajektoria kulki
@@ -78,9 +80,15 @@ if __name__ == '__main__':
             pidController.update(targetDeltaTime)
             ball_position_previous = ball_position_actual
             
-            #aktualizacja pozycji kulki w ppathplannerze
+            #aktualizacja pozycji kulki w pathplannerze
             pathPlanner.setBallPosition(ball_position_actual)
             pidController.setTargetValue(pathPlanner.getPathTarget())
+            
+            #przechodzenie do kolejnego waypoint'a
+            if MM.sqrMagnitude(ball_position_actual[0] - targetPos[0], ball_position_actual[1] - targetPos[1]) < 0.006:
+                path_target_index = (path_target_index + 1) % len(path_targets)
+                targetPos = path_targets[path_target_index]
+                pathPlanner.setTargetPosition(targetPos)
             #print(str(pidController.value_target))
             
             #obslugiwanie wejscia z klawiatury
@@ -136,27 +144,28 @@ if __name__ == '__main__':
             servoController.moveServo(1, -round(pidController.y_servo))
             
             #dostepne trajektorie ruchu kulki
-            if movementMode == 0:    #ksztalt osemki
-                targetPos[0] = math.sin(angle)
-                targetPos[1] = math.sin(2.0 * angle)
-            elif movementMode == 1:  #ksztalt okregu
-                targetPos[0] = math.sin(angle)
-                targetPos[1] = math.cos(angle)
-            elif movementMode == 2:   #ksztalt paraboli
-                targetPos[0] = math.sin(angle)
-                targetPos[1] = math.cos(2.0 * angle)
-            elif movementMode == 3:   #ksztalt litery S
-                targetPos[0] = math.sin(angle)
-                targetPos[1] = math.sin(2.0 * angle)
-                if angle > 2:
-                    angleSpeed = -angleSpeed
-                    angle = 2
-                elif angle < -2:
-                    angleSpeed = -angleSpeed
-                    angle = -2
+            if False:
+                if movementMode == 0:    #ksztalt osemki
+                    targetPos[0] = math.sin(angle)
+                    targetPos[1] = math.sin(2.0 * angle)
+                elif movementMode == 1:  #ksztalt okregu
+                    targetPos[0] = math.sin(angle)
+                    targetPos[1] = math.cos(angle)
+                elif movementMode == 2:   #ksztalt paraboli
+                    targetPos[0] = math.sin(angle)
+                    targetPos[1] = math.cos(2.0 * angle)
+                elif movementMode == 3:   #ksztalt litery S
+                    targetPos[0] = math.sin(angle)
+                    targetPos[1] = math.sin(2.0 * angle)
+                    if angle > 2:
+                        angleSpeed = -angleSpeed
+                        angle = 2
+                    elif angle < -2:
+                        angleSpeed = -angleSpeed
+                        angle = -2
                     
-            targetPos[0] = 0.5 + angleRadiusFactor * angleRadius * targetPos[0]
-            targetPos[1] = 0.5 + angleRadiusFactor * angleRadius * targetPos[1]
+            #targetPos[0] = 0.5 + angleRadiusFactor * angleRadius * targetPos[0]
+            #targetPos[1] = 0.5 + angleRadiusFactor * angleRadius * targetPos[1]
             #ustawianie docelowej pozycji kulki
             #pidController.setTargetValue(targetPos[0], targetPos[1])
             #pathPlanner.setTargetPosition(tuple(targetPos))

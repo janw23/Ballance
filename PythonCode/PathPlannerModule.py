@@ -9,15 +9,17 @@ import copy
 #program odpowiadajacy za planiwanie sciezki kulki
 class PathPlanner:
     
-    
-    obstacle_map_size = 25    #rozmiar mapy przeszkod
+    obstacle_map_size = 40    #rozmiar mapy przeszkod
     obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
+    path_sub_update_delta = 0.2    #co ile sekund aktualizowac podsciezke?
+    path_sub_length = 8    #dlugosc podsciezki w celu optymalizacji
     
     def __init__(self):
         print("PathPlanner object created")
         
         self.obstacle_map = None
         self.path = None
+        self.path_sub_index = 0 #punkt na glownej sciezce, ktory ma zostac osiagniety przez podsciezke
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.ball_pos_x = RawValue('f', 0.5)
@@ -46,12 +48,15 @@ class PathPlanner:
         
     def doPlanning(self, _frame_array):
         obstacle_map_update_time = 0.0
+        path_sub_update_time = 0.0
         while True:
             if time.perf_counter() - obstacle_map_update_time >= PathPlanner.obstacle_map_update_delta:
                 obstacle_map_update_time = time.perf_counter()
                 PathPlanner.updateObstacleMap(self, _frame_array)
                 
-            PathPlanner.UpdatePath(self)
+            if time.perf_counter() - path_sub_update_time >= PathPlanner.path_sub_update_delta:
+                path_sub_update_time = time.perf_counter()
+                PathPlanner.UpdateSubPath(self)
         
     #aktualizuje bitmape przeszkod
     def updateObstacleMap(self, _frame_array):
@@ -71,15 +76,20 @@ class PathPlanner:
                     for side in sides:
                         self.proximity_map[x + side[0], y + side[1]] += 1
         
-        np.clip(self.proximity_map, 0, 1, self.proximity_map)
-        self.proximity_map *= 10000
+        #np.clip(self.proximity_map, 0, 1, self.proximity_map)
+        self.proximity_map *= 5000
         
-    #aktualizuje sciezke przy uzyciu algorytmu A*
-    def UpdatePath(self):
+        #aktualizacja glownej sciezki
+        start = (int(round(self.ball_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.ball_pos_y.value * PathPlanner.obstacle_map_size)))
+        end = (int(round(self.target_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.target_pos_y.value * PathPlanner.obstacle_map_size)))
+        self.path = PathPlanner.a_star(self, start, end)
+        self.path_sub_index = min(len(self.path)-1, PathPlanner.path_sub_length)
         
-        end = (int(round(self.ball_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.ball_pos_y.value * PathPlanner.obstacle_map_size)))
-        start = (int(round(self.target_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.target_pos_y.value * PathPlanner.obstacle_map_size)))
-        #movement = ((1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1))
+    #algorytm A* wyznaczajacy sciezke z punktu A do B
+    def a_star(self, A, B):
+        
+        start = B
+        end = A
         movement = ((1, 0), (-1, 0), (0, 1), (0, -1))
         
         que = MM.PriorityQueue()
@@ -107,10 +117,8 @@ class PathPlanner:
                     if u not in cost or new_cost < cost[u]:
                         cost[u] = new_cost
                         center = PathPlanner.obstacle_map_size // 2
-                        que.push(u, new_cost + MM.sqrMagnitude(v[0] - u[0], v[1] - u[1]) + self.proximity_map[u[0], u[1]] + int(MM.sqrMagnitude(center - u[0], center - u[1]) * 0.08))
+                        que.push(u, new_cost + MM.sqrMagnitude(v[0] - u[0], v[1] - u[1]) + self.proximity_map[u[0], u[1]] + int(MM.sqrMagnitude(center - u[0], center - u[1])))
                         visited_from[u] = v
-                        
-        #timeFinish = time.perf_counter()
         
         path = []
         if visited_from[end] != None:
@@ -123,17 +131,28 @@ class PathPlanner:
             time.sleep(0.05)
             path.append(end)
         
-        self.path = path
+        return path
         
-        index = min(len(path)-1, 3)
-        self.path_x.value = float(path[index][1]) / PathPlanner.obstacle_map_size
-        self.path_y.value = float(path[index][0]) / PathPlanner.obstacle_map_size
+    #aktualizuje podsciezke przy uzyciu algorytmu A*
+    def UpdateSubPath(self):
         
-        #print("Timer = " + str(timeFinish - timeStart))
+        start = (int(round(self.ball_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.ball_pos_y.value * PathPlanner.obstacle_map_size)))
+        end = self.path[self.path_sub_index]
+        subpath = PathPlanner.a_star(self, start, end)
+        
+        #sprawdzanie, czy docelowy podpunkt zostal osiagniety wiec trzeba wyznaczyc kolejny
+        if len(subpath) <= 4:
+            self.path_sub_index = min(len(self.path)-1, self.path_sub_index + PathPlanner.path_sub_length)
+        
+        index = min(len(subpath)-1, 2)
+        vec = MM.normalized(subpath[index][0] - start[0], subpath[index][1] - start[1])
+        self.path_x.value = vec[1] * 0.08 + float(start[1]) / PathPlanner.obstacle_map_size
+        self.path_y.value = vec[0] * 0.08 + float(start[0]) / PathPlanner.obstacle_map_size
             
         frame = copy.copy(self.obstacle_map)
+        #frame = np.uint8(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        for p in path:
+        for p in subpath:
             if p[0] >= 0 and p[0] < PathPlanner.obstacle_map_size and p[1] >= 0 and p[1] < PathPlanner.obstacle_map_size:
                 frame[p[0], p[1]] = [255, 255, 0]
         if start[0] >= 0 and start[0] < PathPlanner.obstacle_map_size and start[1] >= 0 and start[1] < PathPlanner.obstacle_map_size:
