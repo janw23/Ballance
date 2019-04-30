@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
+    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
 
     if not simulationMode:
         import ImageProcessingModule as IPM
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     #roizpoczynanie procesu wykrywania kulki
     imageProcessor.StartProcessing()
-    pathPlanner.startProcessing(imageProcessor.obstacle_map)
+    #pathPlanner.startProcessing(imageProcessor.obstacle_map)
 
     targetDeltaTime = 1.0 / 40.0    #czas jednej iteracji programu sterujacego
     updatedTime = 0.0

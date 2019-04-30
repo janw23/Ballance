@@ -3,7 +3,10 @@ import zmq
 import math
 from time import sleep
 import MathModule as MM
-from multiprocessing import Process, Value
+from multiprocessing import Process, RawValue
+
+import cv2
+import numpy as np
 
 #program do komunikacji z symulacja w Unity3D
 class SimulationCommunicator:
@@ -12,11 +15,11 @@ class SimulationCommunicator:
         print("SimulationCommunicator object created")
         
         #wartosci-rezultaty dzialania symulacji
-        self.result_x = Value('f', 0.0)
-        self.result_y = Value('f', 0.0)
+        self.result_x = RawValue('f', 0.0)
+        self.result_y = RawValue('f', 0.0)
         
-        self.servo_x = Value('i', 0)
-        self.servo_y = Value('i', 0)
+        self.servo_x = RawValue('i', 0)
+        self.servo_y = RawValue('i', 0)
         
         #zmienne wartosci
         self.servo_actual_pos = [0, 0]    #aktualna pozycja serwa
@@ -53,11 +56,21 @@ class SimulationCommunicator:
             if time.perf_counter() - timeRefreshed >= self.refreshDeltaTime:
                 timeRefreshed = time.perf_counter()
                 
-                message = socket.recv()
-                message = message.split()
+                message = socket.recv_multipart()
+                cameraFrame = message[0]
+                ballAndCorners = message[1].split()
+                #print(str(ballAndCorners))
                 
-                self.result_x.value = float(message[0]) / 10000.0
-                self.result_y.value = float(message[1]) / 10000.0
+                cameraFrame = np.frombuffer(cameraFrame, np.uint8)
+                cameraFrame = np.reshape(cameraFrame, (256, 256, 3))
+                cameraFrame = cv2.cvtColor(cameraFrame, cv2.COLOR_RGB2BGR)
+                cameraFrame = cv2.flip(cameraFrame, 0)
+                #print(str(cameraFrame))
+                cv2.imshow("Frame", cameraFrame)
+                cv2.waitKey(1)
+                
+                self.result_x.value = float(ballAndCorners[0]) / 10000.0
+                self.result_y.value = float(ballAndCorners[1]) / 10000.0
                     
                 servo_x = self.servo_x.value
                 socket.send_string(str(servo_x) + " " + str(self.servo_y.value))
