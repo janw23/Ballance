@@ -83,7 +83,7 @@ if __name__ == '__main__':
             pidController.setTargetValue(pathPlanner.getPathTarget())
             
             #przechodzenie do kolejnego waypoint'a
-            if MM.sqrMagnitude(ball_position_actual[0] - targetPos[0], ball_position_actual[1] - targetPos[1]) < 0.006:
+            if MM.sqrMagnitude(ball_position_actual[0] - targetPos[0], ball_position_actual[1] - targetPos[1]) < 0.01:
                 path_target_index = (path_target_index + 1) % len(path_targets)
                 targetPos = path_targets[path_target_index]
                 pathPlanner.setTargetPosition(targetPos)

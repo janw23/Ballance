@@ -96,7 +96,7 @@ class ImageProcessor:
                     self.frame_original = frameGrabbed
                     lastID = ID
                     break
-                else:
+                elif not simulationMode:
                     time.sleep(0.01)
             
             #klatka przeznaczona do debugowania

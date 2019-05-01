@@ -91,6 +91,7 @@ class PathPlanner:
         start = B
         end = A
         movement = ((1, 0), (-1, 0), (0, 1), (0, -1))
+        #movement = ((1, 0), (-1, 0), (0, 1), (0, -1), (-1, -1), (-1, 1), (1, 1), (1, -1))
         
         que = MM.PriorityQueue()
         que.push(start, 0)
@@ -146,7 +147,8 @@ class PathPlanner:
             self.path_sub_index = min(len(self.path)-1, self.path_sub_index + PathPlanner.path_sub_length)
         
         index = min(len(subpath)-1, 2)
-        vec = MM.normalized(subpath[index][0] - start[0], subpath[index][1] - start[1])
+        index2 = min(len(subpath)-1, 1)
+        vec = MM.normalized((subpath[index][0] + subpath[index2][0])*0.5 - start[0], (subpath[index][1] + subpath[index2][1])*0.5 - start[1])
         self.path_x.value = vec[1] * 0.08 + float(start[1]) / PathPlanner.obstacle_map_size
         self.path_y.value = vec[0] * 0.08 + float(start[0]) / PathPlanner.obstacle_map_size
             

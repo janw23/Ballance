@@ -37,6 +37,9 @@ class SimulationCommunicator:
         self.servo_target_pos = [0, 0]    #docelowa pozycja serwa
         
         self.refreshDeltaTime = 1 / 60
+        self.frameReadTargetDelta = 1 / 40
+        self.frameReadLastTime = 0.0
+        self.capturedFrame = np.zeros((256, 256, 3))
         
     def getBallPosition(self):    #zwraca pozycje kulki
         return (self.ball_x.value, self.ball_y.value)
@@ -48,9 +51,12 @@ class SimulationCommunicator:
                 (self.corner_bl_x.value, self.corner_bl_y.value))
     
     def read(self):    #zwraca klatke z symulowanej kamery
-        frame = np.frombuffer(self.cameraFrame, dtype=np.int32)
-        frame = np.reshape(frame, (256, 256, 3)).astype('uint8')
-        return frame
+        if time.perf_counter() - self.frameReadLastTime >= self.frameReadTargetDelta:
+            self.frameReadLastTime = time.perf_counter()
+            self.capturedFrame = np.frombuffer(self.cameraFrame, dtype=np.int32)
+            self.capturedFrame = np.reshape(self.capturedFrame, (256, 256, 3)).astype('uint8')
+            
+        return self.capturedFrame
         
     def StartProcessing(self):   #uruchamia proces przetwarzajacy obraz
         print("Starting simulation communication")
