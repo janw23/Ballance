@@ -1,14 +1,14 @@
-import TensorflowProcessingModule as TPM
+simulationMode = True
+
+if not simulationMode:
+    import TensorflowProcessingModule as TPM
+    from imutils.video.pivideostream import PiVideoStream
 
 import MathModule as MM
 import math, time, copy
 import cv2
-
-from multiprocessing import Process, Value, Array, RawValue, RawArray
-from imutils.video.pivideostream import PiVideoStream
 import numpy as np
-
-import profile
+from multiprocessing import Process, Value, Array, RawValue, RawArray
  
 #program sluzacy do analizy obrazu z kamery, wykrywania kulki
 class ImageProcessor:
@@ -25,8 +25,9 @@ class ImageProcessor:
     obstacle_map_size = 40
     obstacle_map_update_delta = 40
         
-    def __init__(self):
+    def __init__(self, _simulationCommunicator=None):
         print("ImageProcessor object created")
+        self.simulationCommunicator = _simulationCommunicator
         #wartosci-rezultaty przetwarzania obrazu
         self.result_x = RawValue('f', 0.0)
         self.result_y = RawValue('f', 0.0)
@@ -37,6 +38,7 @@ class ImageProcessor:
         self.obstacle_map_update_counter = 0
         
     def getBallPosition(self):    #zwraca pozycje kulki
+        if simulationMode: return self.simulationCommunicator.getBallPosition()
         return (self.result_x.value, self.result_y.value)
         
     def StartProcessing(self):   #uruchamia proces przetwarzajacy obraz
@@ -59,8 +61,11 @@ class ImageProcessor:
         self.ballTracker_size = 40
         self.ballTracker_result = [0, 0]
         
-        self.tensorflowProcessor = TPM.TensorflowProcessor()
-        videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory czyta kolejne klatki z kamery
+        if not simulationMode:
+            self.tensorflowProcessor = TPM.TensorflowProcessor()
+            videoStream = PiVideoStream(resolution=ImageProcessor.camera_resolution, framerate=ImageProcessor.camera_framerate).start()   #uruchamianie watku, ktory czyta kolejne klatki z kamery
+        else:
+            videoStream = self.simulationCommunicator
         
         time.sleep(1)
         self.frame_original = videoStream.read()
@@ -97,10 +102,15 @@ class ImageProcessor:
             #klatka przeznaczona do debugowania
             #self.frame_debug = copy.copy(self.frame_original)
             
-            self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
+            if not simulationMode: self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
+            else: self.corners = self.simulationCommunicator.FindBoardCorners()
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
             self.frame_original = self.frame_original[2:199, 2:199] #przycinanie zdjecia
-            ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
+            if not simulationMode: ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
+            else:
+                pos = self.simulationCommunicator.getBallPosition()
+                self.ballTracker_result[0] = pos[0] * ImageProcessor.detection_image_resolution_cropped[0]
+                self.ballTracker_result[1] = pos[1] * ImageProcessor.detection_image_resolution_cropped[1]
             ImageProcessor.UpdateObstacleMap(self)
             
             #ustawianie znalezionej pozycji kulki w zmiennych dzielonych miedzy procesami
@@ -112,8 +122,8 @@ class ImageProcessor:
                 cv2.imwrite("Frame" + str(saveCounter) + ".png", self.frame_original)
                 saveCounter += 1
                 
-            #cv2.imshow("Frame Casted", self.frame_original)
-            #key = cv2.waitKey(1) & 0xFF
+            cv2.imshow("Frame Casted", self.frame_original)
+            key = cv2.waitKey(1) & 0xFF
             #if key == ord("q") or self.key.value == -666:
             #    break
             

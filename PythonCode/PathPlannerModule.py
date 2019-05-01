@@ -135,6 +135,7 @@ class PathPlanner:
         
     #aktualizuje podsciezke przy uzyciu algorytmu A*
     def UpdateSubPath(self):
+        if self.path == None: return None
         
         start = (int(round(self.ball_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.ball_pos_y.value * PathPlanner.obstacle_map_size)))
         end = self.path[self.path_sub_index]

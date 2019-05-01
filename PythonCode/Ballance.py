@@ -1,16 +1,12 @@
 if __name__ == '__main__':
     simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
 
-    if not simulationMode:
-        import ImageProcessingModule as IPM
+    import ImageProcessingModule as IPM
     import ServoControllerModule as SCM
     import PIDControllerModule as PIDCM
     import DataLoggerModule as DLM
     import PathPlannerModule as PPM
-
-    if simulationMode:
-        import SimulationCommunicatorModule as SimCM
-
+    
     from time import sleep
     import time
     import pygame
@@ -18,11 +14,12 @@ if __name__ == '__main__':
     import MathModule as MM
 
     #wykonanie wstepnych czynnosci
-    if not simulationMode:
-        imageProcessor = IPM.ImageProcessor()
-    else:
+    if simulationMode:
+        import SimulationCommunicatorModule as SimCM
         simulationCommunicator = SimCM.SimulationCommunicator()
-        imageProcessor = simulationCommunicator
+    else: simulationCommunicator = None
+    
+    imageProcessor = IPM.ImageProcessor(simulationCommunicator)
     servoController = SCM.ServoController()
     pathPlanner = PPM.PathPlanner()
         
@@ -34,8 +31,9 @@ if __name__ == '__main__':
     pygame.display.set_mode((100, 100))
 
     #roizpoczynanie procesu wykrywania kulki
+    if simulationMode: simulationCommunicator.StartProcessing()
     imageProcessor.StartProcessing()
-    #pathPlanner.startProcessing(imageProcessor.obstacle_map)
+    pathPlanner.startProcessing(imageProcessor.obstacle_map)
 
     targetDeltaTime = 1.0 / 40.0    #czas jednej iteracji programu sterujacego
     updatedTime = 0.0
