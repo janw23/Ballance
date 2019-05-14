@@ -34,7 +34,6 @@ class ImageProcessor:
         self.key = Value('i', 0)
         
         self.obstacle_map = RawArray('i', ImageProcessor.obstacle_map_size**2)
-        self.obstacle_map_np = np.frombuffer(self.obstacle_map, dtype=np.int32).reshape(ImageProcessor.obstacle_map_size**2)
         self.obstacle_map_update_counter = 0
         
     def getBallPosition(self):    #zwraca pozycje kulki
@@ -55,6 +54,9 @@ class ImageProcessor:
         self.process.terminate()
         
     def ProcessImage(self):    #przetwarza obraz pobierajac klatke z kamery i wykonujac na niej operacje analizy
+        
+        #bufor dzielenia mapy przeszkod z innymi procesami
+        self.obstacle_map_np = np.frombuffer(self.obstacle_map, dtype=np.int32).reshape(ImageProcessor.obstacle_map_size**2)
         
         #parametry trackera kulki
         self.ballTracker_pos = [ImageProcessor.detection_image_resolution[0]//2, ImageProcessor.detection_image_resolution[1]//2]

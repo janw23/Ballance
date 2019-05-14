@@ -62,6 +62,7 @@ class PathPlanner:
     def updateObstacleMap(self, _frame_array):
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
+        #cv2.imshow("Map", frame)
         frame = cv2.inRange(frame, 50, 255)
         #frame = cv2.dilate(frame, None, iterations=1)
         self.obstacle_map = frame
