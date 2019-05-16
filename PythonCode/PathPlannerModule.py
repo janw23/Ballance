@@ -12,14 +12,13 @@ class PathPlanner:
     obstacle_map_size = 40    #rozmiar mapy przeszkod
     obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
     path_sub_update_delta = 0.2    #co ile sekund aktualizowac podsciezke?
-    path_sub_length = 8    #dlugosc podsciezki w celu optymalizacji
     
     def __init__(self):
         print("PathPlanner object created")
         
         self.obstacle_map = None
         self.path = None
-        self.path_sub_index = 0 #punkt na glownej sciezce, ktory ma zostac osiagniety przez podsciezke
+        self_path_last_index = 0
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.ball_pos_x = RawValue('f', 0.5)
@@ -81,14 +80,56 @@ class PathPlanner:
         self.proximity_map *= 5000
         
         #aktualizacja glownej sciezki
-        start = (int(round(self.ball_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.ball_pos_y.value * PathPlanner.obstacle_map_size)))
-        end = (int(round(self.target_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.target_pos_y.value * PathPlanner.obstacle_map_size)))
+        start = (round(self.ball_pos_x.value * PathPlanner.obstacle_map_size), round(self.ball_pos_y.value * PathPlanner.obstacle_map_size))
+        end = (round(self.target_pos_x.value * PathPlanner.obstacle_map_size), round(self.target_pos_y.value * PathPlanner.obstacle_map_size))
         self.path = PathPlanner.a_star(self, start, end)
-        self.path_sub_index = min(len(self.path)-1, PathPlanner.path_sub_length)
+        self.path_last_index = len(self.path)-1
+        
+    #aktualizuje podsciezke przy uzyciu algorytmu A*
+    def UpdateSubPath(self):
+        if self.path == None: return None
+        
+        start = (round(self.ball_pos_x.value * PathPlanner.obstacle_map_size), round(self.ball_pos_y.value * PathPlanner.obstacle_map_size))
+        path = self.path
+        
+        #wyszukiwanie binarne najdlaszego punktu na sciezce, do ktorego da sie dojsc w linii prostej
+        x = 0
+        y = self.path_last_index
+        center = 0
+        index = 0
+        while x <= y:
+            center = (x + y) // 2
+            if not PathPlanner.Raycast(self, start, path[center]):
+                index = center
+                x = center + 1
+            else: y = center - 1
+            
+        vec = MM.normalized(path[index][0] - start[0], path[index][1]- start[1])
+        self.path_x.value = vec[1] * 0.08 + float(start[1]) / PathPlanner.obstacle_map_size
+        self.path_y.value = vec[0] * 0.08 + float(start[0]) / PathPlanner.obstacle_map_size
+            
+        frame = copy.copy(self.obstacle_map)
+        #frame = np.uint8(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        
+        #DEBUG
+        for p in path:
+            if PathPlanner.isPointWithinMap(self, p):
+                frame[p[0], p[1]] = [255, 255, 0]
+            
+        PathPlanner.PaintRay(self, start, path[index], frame)
+        frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
+        
+        cv2.imshow("PathPlanner frame", frame)
+        key = cv2.waitKey(1) & 0xFF
+        
+    #sprawdza, czy punkt wewnatrz mapy przeszkod
+    def isPointWithinMap(self, point):
+        size = self.obstacle_map_size
+        return point[0] >= 0 and point[0] < size and point[1] >= 0 and point[1] < size
         
     #algorytm A* wyznaczajacy sciezke z punktu A do B
     def a_star(self, A, B):
-        
         start = B
         end = A
         movement = ((1, 0), (-1, 0), (0, 1), (0, -1))
@@ -114,7 +155,7 @@ class PathPlanner:
                 nx = v[0] + move[0]
                 ny = v[1] + move[1]
                 
-                if nx >= 0 and nx < PathPlanner.obstacle_map_size and ny >= 0 and ny < PathPlanner.obstacle_map_size and self.obstacle_map[nx, ny] == 0:
+                if PathPlanner.isPointWithinMap(self, (nx, ny)) and self.obstacle_map[nx, ny] == 0:
                     u = (nx, ny)
                     if u not in cost or new_cost < cost[u]:
                         cost[u] = new_cost
@@ -134,36 +175,86 @@ class PathPlanner:
             path.append(end)
         
         return path
+    
+    #sprawdza, czy promien przecina pole, na ktorym znajduje sie przeszkoda
+    def Raycast(self, origin, end):
+        obstacle_map = self.obstacle_map
+        if not PathPlanner.isPointWithinMap(self, origin) or not PathPlanner.isPointWithinMap(self, end): return False    #jesli punkt startowy jest poza mapa
+        if origin == end: return obstacle_map[origin[0], origin[1]]    #jesli promien jest punktem
         
-    #aktualizuje podsciezke przy uzyciu algorytmu A*
-    def UpdateSubPath(self):
-        if self.path == None: return None
+        vec = (end[0] - origin[0], end[1] - origin[1])
+        flipped = False    #czy wspolrzedne w ukladzie sa zamienione miejscami? (x; y) -> (y; x)
+        if abs(vec[1]) > abs(vec[0]):
+            #jesli nachylenie wektora jest wieksze niz 45 stopni
+            #uklad wspolrzednych 'obracany jest' o 90 stopni
+            vec = (vec[1], vec[0])
+            origin = (origin[1], origin[0])
+            end = (end[1], end[0])
+            flipped = True
         
-        start = (int(round(self.ball_pos_x.value * PathPlanner.obstacle_map_size)), int(round(self.ball_pos_y.value * PathPlanner.obstacle_map_size)))
-        end = self.path[self.path_sub_index]
-        subpath = PathPlanner.a_star(self, start, end)
+        dir = vec[1]/vec[0] #wspolczynnik kierunkowy promienia
+        offset = origin[1] - dir * origin[0]    #skladnik 'b' w funkcji y = dir*x + b; przechodzi ona przez 'origin'
         
-        #sprawdzanie, czy docelowy podpunkt zostal osiagniety wiec trzeba wyznaczyc kolejny
-        if len(subpath) <= 4:
-            self.path_sub_index = min(len(self.path)-1, self.path_sub_index + PathPlanner.path_sub_length)
-        
-        index = min(len(subpath)-1, 2)
-        index2 = min(len(subpath)-1, 1)
-        vec = MM.normalized((subpath[index][0] + subpath[index2][0])*0.5 - start[0], (subpath[index][1] + subpath[index2][1])*0.5 - start[1])
-        self.path_x.value = vec[1] * 0.08 + float(start[1]) / PathPlanner.obstacle_map_size
-        self.path_y.value = vec[0] * 0.08 + float(start[0]) / PathPlanner.obstacle_map_size
+        #znaleznienie najbardziej lewego i prawego punktu promienia
+        if origin[0] >= end[0]:
+            left = end[0]
+            right = origin[0]
+        else:
+            left = origin[0]
+            right = end[0]
             
-        frame = copy.copy(self.obstacle_map)
-        #frame = np.uint8(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        for p in subpath:
-            if p[0] >= 0 and p[0] < PathPlanner.obstacle_map_size and p[1] >= 0 and p[1] < PathPlanner.obstacle_map_size:
-                frame[p[0], p[1]] = [255, 255, 0]
-        if start[0] >= 0 and start[0] < PathPlanner.obstacle_map_size and start[1] >= 0 and start[1] < PathPlanner.obstacle_map_size:
-            frame[start[0], start[1]] = [0, 255, 0]
+        #przejscie po wszystkich punktach mapy przeszkod nalezacych do promienia i sprawdzenie, czy ktorys z nich jest przeszkada
+        if not flipped:
+            for x in range(left, right+1):
+                y = round(dir * x + offset)
+                #print("Checked (" + str(x) + ", " + str(y) + ")") 
+                if obstacle_map[x, y] > 0:
+                    return True
+        else:
+            for x in range(left, right+1):
+                y = round(dir * x + offset)
+                #print("Checked (" + str(y) + ", " + str(x) + ")") 
+                if obstacle_map[y, x] > 0:
+                    return True
+                
+        return False
+    
+    #DEBUG
+    def PaintRay(self, origin, end, frame):
+        obstacle_map = self.obstacle_map
+        if not PathPlanner.isPointWithinMap(self, origin) or not PathPlanner.isPointWithinMap(self, end): return    #jesli punkt startowy jest poza mapa
+        if origin == end:
+            frame[origin[0], origin[1]] = [0, 255, 0]
+            return
             
-        frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
         
-        cv2.imshow("PathPlanner frame", frame)
-        key = cv2.waitKey(1) & 0xFF
-        #print("Path = " + str(path))
+        vec = (end[0] - origin[0], end[1] - origin[1])
+        flipped = False    #czy wspolrzedne w ukladzie sa zamienione miejscami? (x; y) -> (y; x)
+        if abs(vec[1]) > abs(vec[0]):
+            #jesli nachylenie wektora jest wieksze niz 45 stopni
+            #uklad wspolrzednych 'obracany jest' o 90 stopni
+            vec = (vec[1], vec[0])
+            origin = (origin[1], origin[0])
+            end = (end[1], end[0])
+            flipped = True
+        
+        dir = vec[1]/vec[0] #wspolczynnik kierunkowy promienia
+        offset = origin[1] - dir * origin[0]    #skladnik 'b' w funkcji y = dir*x + b; przechodzi ona przez 'origin'
+        
+        #znaleznienie najbardziej lewego i prawego punktu promienia
+        if origin[0] >= end[0]:
+            left = end[0]
+            right = origin[0]
+        else:
+            left = origin[0]
+            right = end[0]
+            
+        #przejscie po wszystkich punktach mapy przeszkod nalezacych do promienia i sprawdzenie, czy ktorys z nich jest przeszkada
+        if not flipped:
+            for x in range(left, right+1):
+                y = round(dir * x + offset)
+                frame[x, y] = [0, 255, 0]
+        else:
+            for x in range(left, right+1):
+                y = round(dir * x + offset)
+                frame[y, x] = [0, 255, 0]

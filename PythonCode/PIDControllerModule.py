@@ -101,5 +101,5 @@ class PIDController:
         self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
         self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
         
-        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.998
-        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.998
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.99
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.99
