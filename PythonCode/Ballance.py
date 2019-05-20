@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py
+    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
 
     import ImageProcessingModule as IPM
     import ServoControllerModule as SCM
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     angleSpeed = 0.9
     angleRadius = 0.25
     angleRadiusFactor = 0.0
-    path_targets = [(0.15, 0.15), (0.85, 0.85)]
+    path_targets = [(0.18, 0.18), (0.82, 0.82)]
     path_target_index = 0
     targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
-    duration = 8000000
+    duration = 10000
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -180,11 +180,12 @@ if __name__ == '__main__':
             
             #dodawanie wpisow do DataLog'u
             if False:
+                path_target = pathPlanner.getPathTarget()
                 dataLogger.addRecord("timestamp", time.perf_counter())
                 dataLogger.addRecord("ball_pos_x", ball_position_actual[0])
                 dataLogger.addRecord("ball_pos_y", ball_position_actual[1])
-                #dataLogger.addRecord("ball_vel_x", pidController.ball_velocity_actual[0])
-                #dataLogger.addRecord("ball_vel_y", pidController.ball_velocity_actual[1])
+                dataLogger.addRecord("target_pos_x", path_target[0])
+                dataLogger.addRecord("target_pos_y", path_target[1])
                 dataLogger.addRecord("KP", pidController.KP)
                 dataLogger.addRecord("KI", pidController.KI)
                 dataLogger.addRecord("KD", pidController.KD)
@@ -216,3 +217,4 @@ if __name__ == '__main__':
     #dataLogger.saveToFile("BallanceDataLog")
     if simulationMode: simulationCommunicator.StopProcessing()
     else: imageProcessor.StopProcessing()
+    pathPlanner.stopProcessing()

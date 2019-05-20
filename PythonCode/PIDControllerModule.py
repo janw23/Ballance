@@ -52,9 +52,9 @@ class PIDController:
         self.value_smoothing = 0.7        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
 
         #wspolczynniki kontroli
-        self.KP = 1.45 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.6 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 0.35 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KP = 1.5 * 1000   #wzmocnienie czesci proporcjonalnej
+        self.KI = 7.0 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 0.5 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -101,5 +101,5 @@ class PIDController:
         self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
         self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
         
-        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.99
-        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.99
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.8
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.8

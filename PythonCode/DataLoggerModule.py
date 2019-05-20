@@ -12,7 +12,7 @@ class DataLogger:
     def __init__(self):
         print("DataLogger object created")
         #zdefiniowanie nazw kolumn
-        self.dataColumns = ["timestamp", "ball_pos_x", "ball_pos_y", "ball_vel_x", "ball_vel_y", "KP", "KI", "KD", "error_x", "error_y", "error_prev_x","error_prev_y",
+        self.dataColumns = ["timestamp", "ball_pos_x", "ball_pos_y", "target_pos_x", "target_pos_y", "KP", "KI", "KD", "error_x", "error_y", "error_prev_x","error_prev_y",
                             "error_sum_x", "error_sum_y", "derivative_x", "derivative_y", "servo_actual_x", "servo_actual_y", "servo_target_x", "servo_target_y"]
         self.data2write = []    #wszystkie dane wpisow razem do zapisania
         self.currentRecordData = [None] * len(self.dataColumns)   #dane obecnego wpisu

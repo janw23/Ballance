@@ -1,4 +1,4 @@
-simulationMode = True
+simulationMode = False
 
 if not simulationMode:
     import TensorflowProcessingModule as TPM
@@ -8,7 +8,7 @@ import MathModule as MM
 import math, time, copy
 import cv2
 import numpy as np
-from multiprocessing import Process, Value, Array, RawValue, RawArray
+from multiprocessing import Process, RawValue, RawArray
  
 #program sluzacy do analizy obrazu z kamery, wykrywania kulki
 class ImageProcessor:
@@ -31,7 +31,7 @@ class ImageProcessor:
         #wartosci-rezultaty przetwarzania obrazu
         self.result_x = RawValue('f', 0.0)
         self.result_y = RawValue('f', 0.0)
-        self.key = Value('i', 0)
+        self.key = RawValue('i', 0)
         
         self.obstacle_map = RawArray('i', ImageProcessor.obstacle_map_size**2)
         self.obstacle_map_update_counter = 0
@@ -80,6 +80,7 @@ class ImageProcessor:
         saveCount = 0
         
         while True:
+            if self.key.value == -666: break
             
             #prosty licznik przetworzonych klatek w ciagu sekundy
             a = a + 1
@@ -107,7 +108,7 @@ class ImageProcessor:
             if not simulationMode: self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
             else: self.corners = self.simulationCommunicator.FindBoardCorners()
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
-            self.frame_original = self.frame_original[2:199, 2:199] #przycinanie zdjecia
+            #self.frame_original = self.frame_original[1:200, 1:200] #przycinanie zdjecia
             if not simulationMode: ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
             else:
                 pos = self.simulationCommunicator.getBallPosition()
@@ -126,7 +127,7 @@ class ImageProcessor:
                 
             cv2.imshow("Frame Casted", self.frame_original)
             key = cv2.waitKey(1) & 0xFF
-            #if key == ord("q") or self.key.value == -666:
+            #if key == ord("q"):
             #    break
             
         videoStream.stop()

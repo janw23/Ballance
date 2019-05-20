@@ -11,7 +11,7 @@ class PathPlanner:
     
     obstacle_map_size = 40    #rozmiar mapy przeszkod
     obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
-    path_sub_update_delta = 0.2    #co ile sekund aktualizowac podsciezke?
+    path_sub_update_delta = 0.3    #co ile sekund aktualizowac podsciezke?
     
     def __init__(self):
         print("PathPlanner object created")
@@ -45,6 +45,10 @@ class PathPlanner:
         self.process.daemon = True
         self.process.start()
         
+    def stopProcessing(self):
+        print("Stopping PathPlanner process")
+        self.process.terminate()
+        
     def doPlanning(self, _frame_array):
         obstacle_map_update_time = 0.0
         path_sub_update_time = 0.0
@@ -62,8 +66,9 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 50, 255)
-        #frame = cv2.dilate(frame, None, iterations=1)
+        frame = cv2.inRange(frame, 100, 255)
+        #kernel = np.ones((2,2), np.uint8)
+        #frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
         
         #aktualizacja mapy bliskosci przeszkod
@@ -77,7 +82,7 @@ class PathPlanner:
                         self.proximity_map[x + side[0], y + side[1]] += 1
         
         #np.clip(self.proximity_map, 0, 1, self.proximity_map)
-        self.proximity_map *= 5000
+        self.proximity_map *= 0#5000
         
         #aktualizacja glownej sciezki
         start = (round(self.ball_pos_x.value * PathPlanner.obstacle_map_size), round(self.ball_pos_y.value * PathPlanner.obstacle_map_size))
@@ -89,8 +94,10 @@ class PathPlanner:
     def UpdateSubPath(self):
         if self.path == None: return None
         
-        start = (round(self.ball_pos_x.value * PathPlanner.obstacle_map_size), round(self.ball_pos_y.value * PathPlanner.obstacle_map_size))
+        ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
         path = self.path
+        start = (round(ball_pos[0] * PathPlanner.obstacle_map_size), round(ball_pos[1] * PathPlanner.obstacle_map_size))
+        end = path[self.path_last_index]
         
         #wyszukiwanie binarne najdlaszego punktu na sciezce, do ktorego da sie dojsc w linii prostej
         x = 0
@@ -103,19 +110,28 @@ class PathPlanner:
                 index = center
                 x = center + 1
             else: y = center - 1
-            
-        vec = MM.normalized(path[index][0] - start[0], path[index][1]- start[1])
-        self.path_x.value = vec[1] * 0.08 + float(start[1]) / PathPlanner.obstacle_map_size
-        self.path_y.value = vec[0] * 0.08 + float(start[0]) / PathPlanner.obstacle_map_size
+        
+        end = (end[0] / PathPlanner.obstacle_map_size, end[1] / PathPlanner.obstacle_map_size)
+        dist = 0.13 * MM.clamp(4 * MM.magnitude(ball_pos[0] - end[0], ball_pos[1] - end[1]), 0.4, 1)
+        #print(str(MM.magnitude(ball_pos[0] - self.target_pos_x.value, ball_pos[1] - self.target_pos_y.value)))
+        
+        vec2go = MM.normalized(path[index][0] - start[0], path[index][1]- start[1])    #wektor docelowego ruchu kulki
+        mag = MM.magnitude(0.5 - ball_pos[0], 0.5 - ball_pos[1])    #odleglosc kulki od srodka plyty
+        vec2center = ((0.5 - ball_pos[0]) / mag, (0.5 - ball_pos[1]) / mag)    #wektor z pozycji kulki do srodka plyty
+        edgeReluctance = 0.012 / (0.6 - min(mag, 0.5))
+        print(edgeReluctance)
+        
+        self.path_x.value = vec2go[1] * dist + ball_pos[1] + vec2center[1] * edgeReluctance
+        self.path_y.value = vec2go[0] * dist + ball_pos[0] + vec2center[0] * edgeReluctance
             
         frame = copy.copy(self.obstacle_map)
         #frame = np.uint8(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
         
         #DEBUG
-        for p in path:
-            if PathPlanner.isPointWithinMap(self, p):
-                frame[p[0], p[1]] = [255, 255, 0]
+        #for p in path:
+        #    if PathPlanner.isPointWithinMap(self, p):
+        #        frame[p[0], p[1]] = [255, 255, 0]
             
         PathPlanner.PaintRay(self, start, path[index], frame)
         frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
