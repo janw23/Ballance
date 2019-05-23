@@ -11,7 +11,7 @@ class PathPlanner:
     
     obstacle_map_size = 40    #rozmiar mapy przeszkod
     obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
-    path_sub_update_delta = 0.3    #co ile sekund aktualizowac podsciezke?
+    path_sub_update_delta = 0.1    #co ile sekund aktualizowac podsciezke?
     
     def __init__(self):
         print("PathPlanner object created")
@@ -20,6 +20,9 @@ class PathPlanner:
         self.path = None
         self_path_last_index = 0
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
+        
+        self.path_position = 0.0   #aktualna pozycja na sciezce
+        self.path_speed = 0.3 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
         
         self.ball_pos_x = RawValue('f', 0.5)
         self.ball_pos_y = RawValue('f', 0.5)
@@ -82,13 +85,15 @@ class PathPlanner:
                         self.proximity_map[x + side[0], y + side[1]] += 1
         
         #np.clip(self.proximity_map, 0, 1, self.proximity_map)
-        self.proximity_map *= 0#5000
+        self.proximity_map *= 5000
         
         #aktualizacja glownej sciezki
         start = (round(self.ball_pos_x.value * PathPlanner.obstacle_map_size), round(self.ball_pos_y.value * PathPlanner.obstacle_map_size))
         end = (round(self.target_pos_x.value * PathPlanner.obstacle_map_size), round(self.target_pos_y.value * PathPlanner.obstacle_map_size))
         self.path = PathPlanner.a_star(self, start, end)
+        
         self.path_last_index = len(self.path)-1
+        self.path_position = 0.0
         
     #aktualizuje podsciezke przy uzyciu algorytmu A*
     def UpdateSubPath(self):
@@ -96,48 +101,47 @@ class PathPlanner:
         
         ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
         path = self.path
-        start = (round(ball_pos[0] * PathPlanner.obstacle_map_size), round(ball_pos[1] * PathPlanner.obstacle_map_size))
-        end = path[self.path_last_index]
         
-        #wyszukiwanie binarne najdlaszego punktu na sciezce, do ktorego da sie dojsc w linii prostej
-        x = 0
-        y = self.path_last_index
-        center = 0
-        index = 0
-        while x <= y:
-            center = (x + y) // 2
-            if not PathPlanner.Raycast(self, start, path[center]):
-                index = center
-                x = center + 1
-            else: y = center - 1
+        index = int(self.path_position)
+        A = PathPlanner.FromMapToUnitarySpace(path[index])
         
-        end = (end[0] / PathPlanner.obstacle_map_size, end[1] / PathPlanner.obstacle_map_size)
-        dist = 0.13 * MM.clamp(4 * MM.magnitude(ball_pos[0] - end[0], ball_pos[1] - end[1]), 0.4, 1)
-        #print(str(MM.magnitude(ball_pos[0] - self.target_pos_x.value, ball_pos[1] - self.target_pos_y.value)))
+        if self.path_last_index > 0:
+            B = PathPlanner.FromMapToUnitarySpace(path[index+1])
+            dist = MM.distance(A, B)
+            mant = self.path_position - index
+            
+            self.path_position += self.path_speed * PathPlanner.path_sub_update_delta / (dist * PathPlanner.obstacle_map_size)
+            if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
+            
+            target_y = MM.lerp(A[0], B[0], mant)
+            target_x = MM.lerp(A[1], B[1], mant)
+        else:
+            target_y = A[0]
+            target_x = A[1]
+            
+        print(target_x)
+        print(target_y)
+        print("")
         
-        vec2go = MM.normalized(path[index][0] - start[0], path[index][1]- start[1])    #wektor docelowego ruchu kulki
-        mag = MM.magnitude(0.5 - ball_pos[0], 0.5 - ball_pos[1])    #odleglosc kulki od srodka plyty
-        vec2center = ((0.5 - ball_pos[0]) / mag, (0.5 - ball_pos[1]) / mag)    #wektor z pozycji kulki do srodka plyty
-        edgeReluctance = 0.012 / (0.6 - min(mag, 0.5))
-        print(edgeReluctance)
-        
-        self.path_x.value = vec2go[1] * dist + ball_pos[1] + vec2center[1] * edgeReluctance
-        self.path_y.value = vec2go[0] * dist + ball_pos[0] + vec2center[0] * edgeReluctance
+        self.path_x.value = target_x
+        self.path_y.value = target_y
             
         frame = copy.copy(self.obstacle_map)
-        #frame = np.uint8(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
         
         #DEBUG
-        #for p in path:
-        #    if PathPlanner.isPointWithinMap(self, p):
-        #        frame[p[0], p[1]] = [255, 255, 0]
+        for p in path:
+            if PathPlanner.isPointWithinMap(self, p):
+                frame[p[0], p[1]] = [255, 255, 0]
             
-        PathPlanner.PaintRay(self, start, path[index], frame)
         frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
         
         cv2.imshow("PathPlanner frame", frame)
         key = cv2.waitKey(1) & 0xFF
+        
+    #zmienia uklad odniesienia z mapy przeszkod na jednostkowy
+    def FromMapToUnitarySpace(point):
+        return (point[0] / PathPlanner.obstacle_map_size, point[1] / PathPlanner.obstacle_map_size)
         
     #sprawdza, czy punkt wewnatrz mapy przeszkod
     def isPointWithinMap(self, point):

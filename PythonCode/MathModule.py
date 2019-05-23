@@ -22,6 +22,12 @@ def magnitude(x, y=None):
     if y is not None: return math.sqrt(x*x + y*y)
     return math.sqrt(x[0]*x[0] + x[1]*x[1])
 
+#zwraca odleglosc miedzy punktami A i B
+def distance(A, B):
+    x = A[0] - B[0]
+    y = A[1] - B[1]
+    return math.sqrt(x*x + y*y)
+
 #zwraca znormalizowany wektor [x, y]
 def normalized(x, y=None):
     if y is not None:
