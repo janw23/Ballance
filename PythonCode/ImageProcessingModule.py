@@ -1,4 +1,4 @@
-simulationMode = True
+simulationMode = False
 
 if not simulationMode:
     import TensorflowProcessingModule as TPM
@@ -125,8 +125,8 @@ class ImageProcessor:
                 cv2.imwrite("Frame" + str(saveCounter) + ".png", self.frame_original)
                 saveCounter += 1
                 
-            cv2.imshow("Frame Casted", self.frame_original)
-            key = cv2.waitKey(1) & 0xFF
+            #cv2.imshow("Frame Casted", self.frame_original)
+            #key = cv2.waitKey(1) & 0xFF
             #if key == ord("q"):
             #    break
             
@@ -153,7 +153,7 @@ class ImageProcessor:
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
         #zaznaczanie wizualne pozycji kulki
-        #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 0, 255), -1)
+        cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 0, 255), -1)
         
         #aktualizacja pozycji trackera
         self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.7)

@@ -69,7 +69,7 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 100, 255)
+        frame = cv2.inRange(frame, 90, 255)
         #kernel = np.ones((2,2), np.uint8)
         #frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
@@ -119,9 +119,9 @@ class PathPlanner:
             target_y = A[0]
             target_x = A[1]
             
-        print(target_x)
-        print(target_y)
-        print("")
+        #print(target_x)
+        #print(target_y)
+        #print("")
         
         self.path_x.value = target_x
         self.path_y.value = target_y

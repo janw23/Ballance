@@ -49,11 +49,11 @@ class PIDController:
         self.servo_pos_limit = (1000, 1000)    #ograniczenia wychylen serw (w skali od 0 do 1000)
         self.value_target = [0.5, 0.5]    #docelowa wartosc, ktora ma byc osiagnieta przez kontroler
         self.value_actual = [0.5, 0.5]    #aktualna wartosc
-        self.value_smoothing = 0.7        #wspolczynnik wygladzania aktualizacji aktualnej wartosci
+        self.value_smoothing = 1.0       #wspolczynnik wygladzania aktualizacji aktualnej wartosci
 
         #wspolczynniki kontroli
         self.KP = 1.3 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 2.0 * 1000    #wzmocnienie czesci calkujacej
+        self.KI = 0.6 * 1000    #wzmocnienie czesci calkujacej
         self.KD = 0.5 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
@@ -101,5 +101,5 @@ class PIDController:
         self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
         self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
         
-        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.8
-        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.8
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.99
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.99
