@@ -9,7 +9,7 @@ class TensorflowProcessor:
     
     #sciezka do uzywanego modelu
     ball_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_conv_3_quant.tflite"
-    corner_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_boardcorner_conv_2_quant.tflite"
+    corner_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_boardcorner_conv_2.5_quant.tflite"
     
     #funkcja generujaca zoptymalizowany model
     def QuantizeModel(model_path, output_file_name):

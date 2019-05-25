@@ -1,14 +1,3 @@
-import PathPlannerModule as PPM
-import math
+import TensorflowProcessingModule as TPM
 
-pathPlanner = PPM.PathPlanner()
-
-origin = (0, 0)
-r = 10000
-
-for angle in range(0, 360):
-    ang = angle * math.pi / 180
-    end = (int(round(math.sin(ang) * r)), int(round(math.cos(ang) * r)))
-    print("end = " + str(end))
-    pathPlanner.Raycast(origin, end)
-    print("")
+TPM.TensorflowProcessor.QuantizeModel("/home/pi/ballance/ballance_net/ballancenet_boardcorner_conv2.5", "ballancenet_boardcorner_conv_2.5_quant")

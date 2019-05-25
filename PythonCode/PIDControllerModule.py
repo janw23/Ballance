@@ -13,8 +13,7 @@ class PIDController:
         
     def increaseKD(self):
         self.KD += 50
-        print("KD = " + str(self.KD))
-        
+        print("KD = " + str(self.KD))        
     def decreaseKP(self):
         self.KP -= 50
         print("KP = " + str(self.KP))

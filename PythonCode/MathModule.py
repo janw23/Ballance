@@ -28,6 +28,12 @@ def distance(A, B):
     y = A[1] - B[1]
     return math.sqrt(x*x + y*y)
 
+#zwraca kwadrat odleglosci miedzy punktami A i B
+def sqrDistance(A, B):
+    x = A[0] - B[0]
+    y = A[1] - B[1]
+    return x*x + y*y
+
 #zwraca znormalizowany wektor [x, y]
 def normalized(x, y=None):
     if y is not None:
