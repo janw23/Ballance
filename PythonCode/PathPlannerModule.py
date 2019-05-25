@@ -22,7 +22,7 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.3 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
+        self.path_speed = 0.2 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
         
         self.ball_pos_x = RawValue('f', 0.5)
         self.ball_pos_y = RawValue('f', 0.5)
@@ -88,8 +88,8 @@ class PathPlanner:
         self.proximity_map *= 5000
         
         #aktualizacja glownej sciezki
-        start = (round(self.ball_pos_x.value * PathPlanner.obstacle_map_size), round(self.ball_pos_y.value * PathPlanner.obstacle_map_size))
-        end = (round(self.target_pos_x.value * PathPlanner.obstacle_map_size), round(self.target_pos_y.value * PathPlanner.obstacle_map_size))
+        start = PathPlanner.FromUnitaryToMapSpace((self.ball_pos_x.value, self.ball_pos_y.value), self.obstacle_map_size)
+        end = PathPlanner.FromUnitaryToMapSpace((self.target_pos_x.value, self.target_pos_y.value), self.obstacle_map_size)
         self.path = PathPlanner.a_star(self, start, end)
         
         self.path_last_index = len(self.path)-1
@@ -105,12 +105,18 @@ class PathPlanner:
         index = int(self.path_position)
         A = PathPlanner.FromMapToUnitarySpace(path[index])
         
+        frame = copy.copy(self.obstacle_map)
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        
         if self.path_last_index > 0:
             B = PathPlanner.FromMapToUnitarySpace(path[index+1])
             dist = MM.distance(A, B)
             mant = self.path_position - index
             
-            self.path_position += self.path_speed * PathPlanner.path_sub_update_delta / (dist * PathPlanner.obstacle_map_size)
+            PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
+            if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]):
+                print("False")
+                self.path_position += self.path_speed * PathPlanner.path_sub_update_delta / (dist * PathPlanner.obstacle_map_size)
             if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
             
             target_y = MM.lerp(A[0], B[0], mant)
@@ -126,8 +132,7 @@ class PathPlanner:
         self.path_x.value = target_x
         self.path_y.value = target_y
             
-        frame = copy.copy(self.obstacle_map)
-        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        
         
         #DEBUG
         for p in path:
@@ -142,6 +147,10 @@ class PathPlanner:
     #zmienia uklad odniesienia z mapy przeszkod na jednostkowy
     def FromMapToUnitarySpace(point):
         return (point[0] / PathPlanner.obstacle_map_size, point[1] / PathPlanner.obstacle_map_size)
+    
+    #zmienia uklad odniesienia z jednostkowego na mape przeszkod
+    def FromUnitaryToMapSpace(point, size):
+        return (round(point[0] * size), round(point[1] * size))
         
     #sprawdza, czy punkt wewnatrz mapy przeszkod
     def isPointWithinMap(self, point):
@@ -152,8 +161,8 @@ class PathPlanner:
     def a_star(self, A, B):
         start = B
         end = A
-        movement = ((1, 0), (-1, 0), (0, 1), (0, -1))
-        #movement = ((1, 0), (-1, 0), (0, 1), (0, -1), (-1, -1), (-1, 1), (1, 1), (1, -1))
+        #movement = ((1, 0), (-1, 0), (0, 1), (0, -1))
+        movement = ((1, 0), (-1, 0), (0, 1), (0, -1), (-1, -1), (-1, 1), (1, 1), (1, -1))
         
         que = MM.PriorityQueue()
         que.push(start, 0)
@@ -171,9 +180,13 @@ class PathPlanner:
             if v == end: break
             
             new_cost = cost[v] + 1
+            i = 0
             for move in movement:
                 nx = v[0] + move[0]
                 ny = v[1] + move[1]
+                
+                i += 1
+                if i == 5: new_cost += 0.4
                 
                 if PathPlanner.isPointWithinMap(self, (nx, ny)) and self.obstacle_map[nx, ny] == 0:
                     u = (nx, ny)
