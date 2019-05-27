@@ -51,9 +51,9 @@ class PIDController:
         self.value_smoothing = 1.0       #wspolczynnik wygladzania aktualizacji aktualnej wartosci
 
         #wspolczynniki kontroli
-        self.KP = 1.3 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.6 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 0.5 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KP = 1.25 * 1000   #wzmocnienie czesci proporcjonalnej
+        self.KI = 0.65 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 0.6 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0

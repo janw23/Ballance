@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     targetDeltaTime = 1.0 / 40.0    #czas jednej iteracji programu sterujacego
     updatedTime = 0.0
-    servoUpdateDeltaTime = 1.0 / 60 #czas odswiezania pozycji serw
+    servoUpdateDeltaTime = 1.0 / 80 #czas odswiezania pozycji serw
     servoUpdatedTime = 0.0
 
     ball_position_actual = (0.0, 0.0)
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
     movementMode = 0
-    modeChangeTimeDelta = 25 #czas po jakim zmieniana jest trajektoria kulki
+    modeChangeTimeDelta = 4 #czas po jakim zmieniana jest trajektoria kulki
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
@@ -142,6 +142,7 @@ if __name__ == '__main__':
             servoController.moveServo(1, -round(pidController.y_servo))
             
             #dostepne trajektorie ruchu kulki
+            #targetPos = [0, 0]
             if False:
                 if movementMode == 0:    #ksztalt osemki
                     targetPos[0] = math.sin(angle)
@@ -161,9 +162,13 @@ if __name__ == '__main__':
                     elif angle < -2:
                         angleSpeed = -angleSpeed
                         angle = -2
+                elif movementMode == 4:
+                    targetPos[0] = -0.15
+                elif movementMode == 5:
+                    targetPos[0] = 0.15
                     
-            #targetPos[0] = 0.5 + angleRadiusFactor * angleRadius * targetPos[0]
-            #targetPos[1] = 0.5 + angleRadiusFactor * angleRadius * targetPos[1]
+            #targetPos[0] = 0.5 + targetPos[0]#angleRadiusFactor * angleRadius * targetPos[0]
+            #targetPos[1] = 0.5 + targetPos[1]#angleRadiusFactor * angleRadius * targetPos[1]
             #ustawianie docelowej pozycji kulki
             #pidController.setTargetValue(targetPos[0], targetPos[1])
             #pathPlanner.setTargetPosition(tuple(targetPos))
@@ -176,7 +181,9 @@ if __name__ == '__main__':
                 modeChangeTimer = 0.0
                 angleRadiusFactor = 0.0
                 movementMode += 1
-                movementMode = movementMode % 4
+                movementMode = 4 + movementMode % 2
+                #dataLogger.makePlot()
+                #dataLogger.clearData()
             
             #dodawanie wpisow do DataLog'u
             if False:

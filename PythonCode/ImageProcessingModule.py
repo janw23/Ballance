@@ -33,6 +33,7 @@ class ImageProcessor:
         self.result_y = RawValue('f', 0.0)
         self.key = RawValue('i', 0)
         
+        self.corners = np.zeros((4, 2), np.int32) #pozycje rogow plyty
         self.obstacle_map = RawArray('i', ImageProcessor.obstacle_map_size**2)
         self.obstacle_map_update_counter = 0
         
@@ -105,10 +106,12 @@ class ImageProcessor:
             #klatka przeznaczona do debugowania
             #self.frame_debug = copy.copy(self.frame_original)
             
-            if not simulationMode: self.corners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
+            if not simulationMode:
+                newCorners = ImageProcessor.FindBoardCorners(self)    #znajdowanie pozycji rogow plyty
+                for i in range(4):
+                    self.corners[i] = (MM.lerp(self.corners[i][0], newCorners[i][0], 0.3), MM.lerp(self.corners[i][1], newCorners[i][1], 0.3)) #wygladzanie aktualizacji pozycji rogow plyty
             else: self.corners = self.simulationCommunicator.FindBoardCorners()
             ImageProcessor.ChangePerspective(self)    #zmiana perspektywy znalezionej tablicy, aby wygladala jak kwadrat
-            #self.frame_original = self.frame_original[1:200, 1:200] #przycinanie zdjecia
             if not simulationMode: ImageProcessor.UpdateBallTracker(self)    #aktualizacja trackera kulki
             else:
                 pos = self.simulationCommunicator.getBallPosition()
@@ -153,7 +156,7 @@ class ImageProcessor:
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
         #zaznaczanie wizualne pozycji kulki
-        #cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 0, 255), -1)
+        cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 255, 0), -1)
         
         #aktualizacja pozycji trackera
         self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.7)

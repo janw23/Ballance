@@ -8,7 +8,7 @@ import tensorflow as tf
 class TensorflowProcessor:
     
     #sciezka do uzywanego modelu
-    ball_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_conv_3_quant.tflite"
+    ball_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_conv_4_quant.tflite"
     corner_detector_model_path = "/home/pi/ballance/Ballance/Tensorflow/ballancenet_boardcorner_conv_2.5_quant.tflite"
     
     #funkcja generujaca zoptymalizowany model

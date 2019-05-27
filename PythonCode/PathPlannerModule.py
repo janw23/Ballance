@@ -11,7 +11,7 @@ class PathPlanner:
     
     obstacle_map_size = 40    #rozmiar mapy przeszkod
     obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
-    path_sub_update_delta = 0.1    #co ile sekund aktualizowac podsciezke?
+    path_sub_update_delta = 0.05    #co ile sekund aktualizowac podsciezke?
     
     def __init__(self):
         print("PathPlanner object created")
@@ -22,8 +22,8 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.25 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
-        self.path_max_dist = 0.1**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
+        self.path_speed = 0.15 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
+        self.path_max_dist = 0.15**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
         
         self.ball_pos_x = RawValue('f', 0.5)
         self.ball_pos_y = RawValue('f', 0.5)
@@ -70,7 +70,7 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 80, 255)
+        frame = cv2.inRange(frame, 70, 255)
         #kernel = np.ones((2,2), np.uint8)
         #frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
@@ -78,12 +78,16 @@ class PathPlanner:
         #aktualizacja mapy bliskosci przeszkod
         self.proximity_map.fill(0)
         size = PathPlanner.obstacle_map_size - 1
-        sides = ((1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1))
+        sides = ((1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1),
+                 (2, 0), (2, -2), (0, -2), (-2, -2), (-2, 0), (-2, 2), (0, 2), (2, 2))
         for x in range(1, size):
             for y in range(1, size):
                 if frame[x, y] > 0:
                     for side in sides:
-                        self.proximity_map[x + side[0], y + side[1]] += 1
+                        nx = x + side[0]
+                        ny = y + side[1]
+                        if PathPlanner.isPointWithinMap(self, (nx, ny)):
+                            self.proximity_map[nx, ny] += 1
         
         #np.clip(self.proximity_map, 0, 1, self.proximity_map)
         self.proximity_map *= 5000
@@ -134,8 +138,8 @@ class PathPlanner:
         #print(target_y)
         #print("")
         
-        self.path_x.value = target_x
-        self.path_y.value = target_y
+        self.path_x.value = MM.lerp(self.path_x.value, target_x, 0.5)
+        self.path_y.value = MM.lerp(self.path_y.value, target_y, 0.5)
             
         frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
         
