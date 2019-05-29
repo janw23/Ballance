@@ -9,9 +9,9 @@ import copy
 #program odpowiadajacy za planiwanie sciezki kulki
 class PathPlanner:
     
-    obstacle_map_size = 40    #rozmiar mapy przeszkod
-    obstacle_map_update_delta = 4    #co ile sekund odswiezana ma byc mapa przeszkod?
-    path_sub_update_delta = 0.05    #co ile sekund aktualizowac podsciezke?
+    obstacle_map_size = 30    #rozmiar mapy przeszkod
+    obstacle_map_update_delta = 0.5    #co ile sekund odswiezana ma byc mapa przeszkod?
+    path_sub_update_delta = 0.03    #co ile sekund aktualizowac podsciezke?
     
     def __init__(self):
         print("PathPlanner object created")
@@ -22,8 +22,13 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.15 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
-        self.path_max_dist = 0.15**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
+        self.path_speed = 0.2 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
+        self.path_max_dist = 0.2**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
+        
+        self.path_stuck_pos = [0, 0] #pozycja, wzgledem ktorej sprawdzana jest odleglosc kulki w celu stwierdzenia utkniecia
+        self.path_stuck_dist = 0.05**2 #odleglosc od danego miejsca, ktora kulka musi przekroczyc, zeby nie byla uznana za utknieta
+        self.path_stuck_time = 2 #czas, po ktorym kulka zostaje uznana za utknieta
+        self.path_stuck_timer = 0.0
         
         self.ball_pos_x = RawValue('f', 0.5)
         self.ball_pos_y = RawValue('f', 0.5)
@@ -59,7 +64,8 @@ class PathPlanner:
         while True:
             if time.perf_counter() - obstacle_map_update_time >= PathPlanner.obstacle_map_update_delta:
                 obstacle_map_update_time = time.perf_counter()
-                PathPlanner.updateObstacleMap(self, _frame_array)
+                #PathPlanner.updateObstacleMap(self, _frame_array)
+                PathPlanner.CheckForBallStuck(self, _frame_array)
                 
             if time.perf_counter() - path_sub_update_time >= PathPlanner.path_sub_update_delta:
                 path_sub_update_time = time.perf_counter()
@@ -70,7 +76,7 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 70, 255)
+        frame = cv2.inRange(frame, 100, 255)
         #kernel = np.ones((2,2), np.uint8)
         #frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
@@ -78,19 +84,25 @@ class PathPlanner:
         #aktualizacja mapy bliskosci przeszkod
         self.proximity_map.fill(0)
         size = PathPlanner.obstacle_map_size - 1
-        sides = ((1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1),
-                 (2, 0), (2, -2), (0, -2), (-2, -2), (-2, 0), (-2, 2), (0, 2), (2, 2))
+        sidesClose = ((1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1))
+        sidesFar = ((2, 0), (2, -2), (0, -2), (-2, -2), (-2, 0), (-2, 2), (0, 2), (2, 2))
         for x in range(1, size):
             for y in range(1, size):
                 if frame[x, y] > 0:
-                    for side in sides:
+                    for side in sidesClose:
+                        nx = x + side[0]
+                        ny = y + side[1]
+                        if PathPlanner.isPointWithinMap(self, (nx, ny)):
+                            self.proximity_map[nx, ny] += 100
+                            
+                    for side in sidesFar:
                         nx = x + side[0]
                         ny = y + side[1]
                         if PathPlanner.isPointWithinMap(self, (nx, ny)):
                             self.proximity_map[nx, ny] += 1
         
         #np.clip(self.proximity_map, 0, 1, self.proximity_map)
-        self.proximity_map *= 5000
+        self.proximity_map *= 1000
         
         #aktualizacja glownej sciezki
         start = PathPlanner.FromUnitaryToMapSpace((self.ball_pos_x.value, self.ball_pos_y.value), self.obstacle_map_size)
@@ -100,22 +112,26 @@ class PathPlanner:
         self.path_last_index = len(self.path)-1
         self.path_position = 0.0
         
-    #aktualizuje podsciezke przy uzyciu algorytmu A*
-    def UpdateSubPath(self):
-        if self.path == None: return None
-        
-        ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
-        path = self.path
-        
-        index = int(self.path_position)
-        A = PathPlanner.FromMapToUnitarySpace(path[index])
-        
         #DEBUG
+        path = self.path
         frame = copy.copy(self.obstacle_map)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
         for p in path:
             if PathPlanner.isPointWithinMap(self, p):
                 frame[p[0], p[1]] = [255, 255, 0]
+                
+        frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("PathPlanner frame", frame)
+        key = cv2.waitKey(1) & 0xFF
+        
+    #aktualizuje podsciezke przy uzyciu algorytmu A*
+    def UpdateSubPath(self):
+        if self.path == None: return None
+        
+        path = self.path
+        ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
+        index = int(self.path_position)
+        A = PathPlanner.FromMapToUnitarySpace(path[index])
         
         if self.path_last_index > 0:
             B = PathPlanner.FromMapToUnitarySpace(path[index+1])
@@ -125,7 +141,7 @@ class PathPlanner:
             target_y = MM.lerp(A[0], B[0], mant)
             target_x = MM.lerp(A[1], B[1], mant)
             
-            PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
+            #PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
             if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
                 self.path_position += self.path_speed * PathPlanner.path_sub_update_delta / (dist * PathPlanner.obstacle_map_size)
             if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
@@ -133,18 +149,22 @@ class PathPlanner:
         else:
             target_y = A[0]
             target_x = A[1]
-            
-        #print(target_x)
-        #print(target_y)
-        #print("")
         
         self.path_x.value = MM.lerp(self.path_x.value, target_x, 0.5)
         self.path_y.value = MM.lerp(self.path_y.value, target_y, 0.5)
-            
-        frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
         
-        cv2.imshow("PathPlanner frame", frame)
-        key = cv2.waitKey(1) & 0xFF
+    #sprawdza, czy kulka utknela i trzeba jeszcze raz policzyc docelowa droge
+    def CheckForBallStuck(self, _frame_array):
+        ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
+        if MM.sqrDistance(ball_pos, self.path_stuck_pos) > self.path_stuck_dist:
+            self.path_stuck_pos[0] = ball_pos[0]
+            self.path_stuck_pos[1] = ball_pos[1]
+            self.path_stuck_timer = time.perf_counter()
+        elif time.perf_counter() - self.path_stuck_timer >= self.path_stuck_time:
+            PathPlanner.updateObstacleMap(self, _frame_array)
+            self.path_stuck_pos[0] = ball_pos[0]
+            self.path_stuck_pos[1] = ball_pos[1]
+            self.path_stuck_timer = time.perf_counter()
         
     #zmienia uklad odniesienia z mapy przeszkod na jednostkowy
     def FromMapToUnitarySpace(point):

@@ -22,7 +22,7 @@ class ImageProcessor:
     detection_image_resolution_cropped = (-1, -1)
     
     #rozmiar bitmapy przeszkod
-    obstacle_map_size = 40
+    obstacle_map_size = 30
     obstacle_map_update_delta = 40
         
     def __init__(self, _simulationCommunicator=None):
@@ -205,7 +205,7 @@ class ImageProcessor:
     def ChangePerspective(self):
         pts = np.array(self.corners, np.float32)
         res = self.detection_image_resolution
-        enlarge = 3
+        enlarge = 2
         pts2 = np.float32([[enlarge,enlarge],[res[0]-enlarge,enlarge],[res[0]-enlarge, res[1]-enlarge], [enlarge, res[1]-enlarge]])
 
         M = cv2.getPerspectiveTransform(pts, pts2)

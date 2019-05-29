@@ -53,7 +53,7 @@ class PIDController:
         #wspolczynniki kontroli
         self.KP = 1.25 * 1000   #wzmocnienie czesci proporcjonalnej
         self.KI = 0.65 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 0.6 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KD = 0.65 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -84,8 +84,8 @@ class PIDController:
         #print("Error = ( " + str(self.x_error) + "; " + str(self.y_error) + ")")
 
         #liczenie pochodnej
-        self.x_derivative = (self.x_error - self.x_prev_error) / deltaTime
-        self.y_derivative = (self.y_error - self.y_prev_error) / deltaTime
+        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 0.5)
+        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 0.5)
 
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error
