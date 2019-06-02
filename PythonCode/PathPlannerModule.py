@@ -24,6 +24,9 @@ class PathPlanner:
         self.path_position = 0.0   #aktualna pozycja na sciezce
         self.path_speed = 0.2 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
         self.path_max_dist = 0.2**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
+        self.path_position_smoothing = 0.5   #wspolczynnik wygladzania docelowej pozycjip
+        self.path_position_smoothing_real = 0.0
+        self.path_position_smoothing_gain = 0.5   #szybkosc odzyskiwania wygladzania po ustawieniu na zero
         
         self.path_stuck_pos = [0, 0] #pozycja, wzgledem ktorej sprawdzana jest odleglosc kulki w celu stwierdzenia utkniecia
         self.path_stuck_dist = 0.05**2 #odleglosc od danego miejsca, ktora kulka musi przekroczyc, zeby nie byla uznana za utknieta
@@ -111,6 +114,7 @@ class PathPlanner:
         
         self.path_last_index = len(self.path)-1
         self.path_position = 0.0
+        self.path_position_smoothing_real = 0.0
         
         #DEBUG
         path = self.path
@@ -150,8 +154,11 @@ class PathPlanner:
             target_y = A[0]
             target_x = A[1]
         
-        self.path_x.value = MM.lerp(self.path_x.value, target_x, 0.5)
-        self.path_y.value = MM.lerp(self.path_y.value, target_y, 0.5)
+        self.path_x.value = MM.lerp(self.path_x.value, target_x, self.path_position_smoothing_real)
+        self.path_y.value = MM.lerp(self.path_y.value, target_y, self.path_position_smoothing_real)
+        
+        self.path_position_smoothing_real += self.path_position_smoothing_gain * PathPlanner.path_sub_update_delta
+        self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
         
     #sprawdza, czy kulka utknela i trzeba jeszcze raz policzyc docelowa droge
     def CheckForBallStuck(self, _frame_array):

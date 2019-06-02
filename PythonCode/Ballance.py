@@ -53,7 +53,7 @@ if __name__ == '__main__':
     targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
     movementMode = 0
-    modeChangeTimeDelta = 4 #czas po jakim zmieniana jest trajektoria kulki
+    modeChangeTimeDelta = 8 #czas po jakim zmieniana jest trajektoria kulki
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program

@@ -49,11 +49,12 @@ class PIDController:
         self.value_target = [0.5, 0.5]    #docelowa wartosc, ktora ma byc osiagnieta przez kontroler
         self.value_actual = [0.5, 0.5]    #aktualna wartosc
         self.value_smoothing = 1.0       #wspolczynnik wygladzania aktualizacji aktualnej wartosci
+        self.value_target_updated = False #czy docelowa wartosc zostala wlasnie zaktualizowana?
 
         #wspolczynniki kontroli
-        self.KP = 1.25 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.65 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 0.65 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KP = 1.2 * 1000   #wzmocnienie czesci proporcjonalnej
+        self.KI = 0.6 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 0.8 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -84,8 +85,8 @@ class PIDController:
         #print("Error = ( " + str(self.x_error) + "; " + str(self.y_error) + ")")
 
         #liczenie pochodnej
-        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 0.5)
-        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 0.5)
+        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 0.25)
+        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 0.25)
 
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error

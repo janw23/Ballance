@@ -61,6 +61,15 @@ def clamp(num, _min, _max):
     elif num < _min: return _min
     return num
 
+#zwraca mediane liczb z tablicy 'data'
+def Median(data):
+    order = sorted(data)
+    size = len(order)
+    if size % 2 == 0:
+        size = size // 2
+        return (order[size-1] + order[size]) / 2
+    return order[size//2]
+
 #kolejka priorytetowa
 class PriorityQueue:
     def __init__(self):
@@ -78,3 +87,19 @@ class PriorityQueue:
     def empty(self):
         return len(self.elements) == 0
         
+class MedianFilter:
+    #size to wielkosc kernela filtra
+    def __init__(self, size):
+        self.data = [0.0] * size
+        self.size = size
+        self.index = 0
+        
+    #dodaje element do tablicy danych filtra
+    def push(self, num):
+        self.data[self.index] = num
+        self.index += 1
+        if self.index == self.size: self.index = 0
+        
+    #zwraca przefiltrowana wartosc
+    def getValue(self):
+        return Median(self.data)
