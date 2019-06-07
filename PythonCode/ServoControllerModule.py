@@ -1,5 +1,5 @@
 from __future__ import division
-simulationMode = False
+simulationMode = True
 
 if not simulationMode:
     import sys
@@ -16,7 +16,7 @@ class ServoController:
     servo_pulse_neutral = (1940, 1895)    #wartosci pwm dla pozycji neutralnych serw
     servo_pulse_range = (500, 500)      #zakres wartosci sygnalu pwm dla ruchu serw
     servo_pos_limit = (800, 800)    #ograniczenia wychylen serw (w skali od 0 do 1000)
-    servo_movement_speed = (60000, 60000)    #szybkosci ruchu serw
+    servo_movement_speed = (6000, 6000)    #szybkosci ruchu serw
     
     def __init__(self):
         if not simulationMode:

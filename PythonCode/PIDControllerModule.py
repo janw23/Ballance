@@ -85,8 +85,8 @@ class PIDController:
         #print("Error = ( " + str(self.x_error) + "; " + str(self.y_error) + ")")
 
         #liczenie pochodnej
-        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 0.25)
-        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 0.25)
+        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 1)#0.25)
+        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 1)#0.25)
 
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error

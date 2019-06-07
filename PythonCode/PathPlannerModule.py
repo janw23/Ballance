@@ -18,7 +18,8 @@ class PathPlanner:
         
         self.obstacle_map = None
         self.path = None
-        self_path_last_index = 0
+        self.path_map = None
+        self.path_last_index = 0
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
@@ -116,17 +117,53 @@ class PathPlanner:
         self.path_position = 0.0
         self.path_position_smoothing_real = 0.0
         
-        #DEBUG
+        #update path map
         path = self.path
+        self.path_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size), dtype=bool)
+        if PathPlanner.isPointWithinMap(self, path[0]):
+            for p in path:
+                self.path_map[p[0], p[1]] = True
+                
+        PathPlanner.OptimizePath(self)
+        
+        #DEBUG
         frame = copy.copy(self.obstacle_map)
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        for p in path:
-            if PathPlanner.isPointWithinMap(self, p):
+        if PathPlanner.isPointWithinMap(self, path[0]):
+            for p in self.path:
                 frame[p[0], p[1]] = [255, 255, 0]
+                
                 
         frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
         cv2.imshow("PathPlanner frame", frame)
         key = cv2.waitKey(1) & 0xFF
+        
+    #optymalizuje sciezke wyznaczana do kulki
+    def OptimizePath(self):
+        index = 1
+        last = self.path_last_index
+        
+        path = self.path
+        newPath = [path[0]]
+        
+        while index <= last:
+            #wyszukiwanie binarne najdlaszego punktu na sciezce, do ktorego da sie dojsc w linii prostej
+            x = index
+            y = last
+            center = 0
+            pos = x
+            while x <= y:
+                center = (x + y) // 2
+                if PathPlanner.RaycastPath(self, newPath[len(newPath)-1], path[center]):
+                    pos = center
+                    x = center + 1
+                else: y = center - 1
+                
+            newPath.append(path[pos])
+            index = pos+1
+        
+        self.path = newPath
+        self.path_last_index = len(newPath)-1
         
     #aktualizuje podsciezke przy uzyciu algorytmu A*
     def UpdateSubPath(self):
@@ -135,9 +172,10 @@ class PathPlanner:
         path = self.path
         ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
         index = int(self.path_position)
+        path_last_index = self.path_last_index
         A = PathPlanner.FromMapToUnitarySpace(path[index])
         
-        if self.path_last_index > 0:
+        if path_last_index > 0:
             B = PathPlanner.FromMapToUnitarySpace(path[index+1])
             dist = MM.distance(A, B)
             mant = self.path_position - index
@@ -276,6 +314,47 @@ class PathPlanner:
                     return True
                 
         return False
+    
+    #sprawdza, czy wszystkie punkty miedzy origin a end naleza do sciezki
+    def RaycastPath(self, origin, end):
+        path_map = self.path_map
+        if not PathPlanner.isPointWithinMap(self, origin) or not PathPlanner.isPointWithinMap(self, end): return False    #jesli punkt startowy jest poza mapa
+        if origin == end: return path_map[origin[0], origin[1]]    #jesli promien jest punktem
+        
+        vec = (end[0] - origin[0], end[1] - origin[1])
+        flipped = False    #czy wspolrzedne w ukladzie sa zamienione miejscami? (x; y) -> (y; x)
+        if abs(vec[1]) > abs(vec[0]):
+            #jesli nachylenie wektora jest wieksze niz 45 stopni
+            #uklad wspolrzednych 'obracany jest' o 90 stopni
+            vec = (vec[1], vec[0])
+            origin = (origin[1], origin[0])
+            end = (end[1], end[0])
+            flipped = True
+        
+        dir = vec[1]/vec[0] #wspolczynnik kierunkowy promienia
+        offset = origin[1] - dir * origin[0]    #skladnik 'b' w funkcji y = dir*x + b; przechodzi ona przez 'origin'
+        
+        #znaleznienie najbardziej lewego i prawego punktu promienia
+        if origin[0] >= end[0]:
+            left = end[0]
+            right = origin[0]
+        else:
+            left = origin[0]
+            right = end[0]
+            
+        #sprawdzenie, czy wszystkie punkty promienia naleza do sciezki
+        if not flipped:
+            for x in range(left, right+1):
+                y = round(dir * x + offset)
+                if not path_map[x, y]:
+                    return False
+        else:
+            for x in range(left, right+1):
+                y = round(dir * x + offset)
+                if not path_map[y, x]:
+                    return False
+                
+        return True
     
     #DEBUG
     def PaintRay(self, origin, end, frame):
