@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import MathModule as MM
+import math
 import time
 from multiprocessing import Process, RawValue
 from collections import deque
@@ -24,6 +25,7 @@ class PathPlanner:
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
         self.path_speed = 0.2    #predkosc przechodzenia sciezki
+        self.path_angle = 0.0    #aktualny kat miedzy kolejnymi punktami sciezki (do liczenia docelowej predkosci kulki)
         self.path_max_dist = 0.2**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
         self.path_position_smoothing = 0.5   #wspolczynnik wygladzania docelowej pozycjip
         self.path_position_smoothing_real = 0.0
@@ -125,6 +127,7 @@ class PathPlanner:
                 self.path_map[p[0], p[1]] = True
                 
         PathPlanner.OptimizePath(self)
+        PathPlanner.CalculateNextPathAngle(self, 0)
         
         #DEBUG
         frame = copy.copy(self.obstacle_map)
@@ -185,8 +188,10 @@ class PathPlanner:
             
             #PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
             if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
-                self.path_position += PathPlanner.GetTargetSpeed(self.path_speed, dist - mant*dist, 0) * PathPlanner.path_sub_update_delta / dist
+                self.path_position += PathPlanner.GetTargetSpeed(self.path_speed, dist - mant*dist, self.path_angle) * PathPlanner.path_sub_update_delta / dist
             if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
+            #czy nalezy zaktualiowac kat sciezki?
+            if int(self.path_position) > index: PathPlanner.CalculateNextPathAngle(self, index+1)
             
         else:
             target_y = A[0]
@@ -198,10 +203,30 @@ class PathPlanner:
         self.path_position_smoothing_real += self.path_position_smoothing_gain * PathPlanner.path_sub_update_delta
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
         
+    #oblicza nastepny kat miedzy punktami na sciezce
+    def CalculateNextPathAngle(self, index):
+        if self.path_last_index < index+2:
+            self.path_angle = -9.99
+            return
+        
+        path = self.path
+        a = index
+        b = index+1
+        c = index+2
+        
+        A = (path[b][0] - path[a][0], path[b][1] - path[a][1])
+        B = (path[c][0] - path[b][0], path[c][1] - path[b][1])
+        dot = MM.dot(A, B)
+        cross = MM.cross(A, B)
+        self.path_angle = math.atan2(cross, dot)
+        
     #zwraca docelowa predkosc kulki na podstawie predkosci podstawowej 'base', odlegosci 'dist' do nastepnego punktu i kata 'angle' miedzy nastepnymi punktami
     def GetTargetSpeed(base, dist, angle):
-        spd = min(base, 1.2 * base * MM.softsign(10*dist) + 0.1*base)
-        print(spd)
+        spd = min(base, base * MM.softsign(5*dist) + base * (1.2 - min((1.57 - 0.3/(0.1+abs(angle))) * 0.63661977, 1.0)))
+        #print("angle = " + str(angle))
+        #print("dist = " + str(dist))
+        #print("speed = " + str(spd))
+        #print("")
         return spd
         
         

@@ -65,6 +65,14 @@ def clamp(num, _min, _max):
     elif num < _min: return _min
     return num
 
+#zwraca wartosc iloczynu skalarnego miedzy wektorami A i B
+def dot(A, B):
+    return A[0] * B[0] + A[1] * B[1]
+
+#zwraca wartosc iloczynu wektorowego miedzy wektorami A i B
+def cross(A, B):
+    return A[0] * B[1] - A[1] * B[0]
+
 #zwraca mediane liczb z tablicy 'data'
 def Median(data):
     order = sorted(data)
