@@ -23,7 +23,7 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.2 * PathPlanner.obstacle_map_size    #predkosc przechodzenia sciezki
+        self.path_speed = 0.2    #predkosc przechodzenia sciezki
         self.path_max_dist = 0.2**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
         self.path_position_smoothing = 0.5   #wspolczynnik wygladzania docelowej pozycjip
         self.path_position_smoothing_real = 0.0
@@ -185,7 +185,7 @@ class PathPlanner:
             
             #PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
             if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
-                self.path_position += self.path_speed * PathPlanner.path_sub_update_delta / (dist * PathPlanner.obstacle_map_size)
+                self.path_position += PathPlanner.GetTargetSpeed(self.path_speed, dist - mant*dist, 0) * PathPlanner.path_sub_update_delta / dist
             if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
             
         else:
@@ -197,6 +197,13 @@ class PathPlanner:
         
         self.path_position_smoothing_real += self.path_position_smoothing_gain * PathPlanner.path_sub_update_delta
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
+        
+    #zwraca docelowa predkosc kulki na podstawie predkosci podstawowej 'base', odlegosci 'dist' do nastepnego punktu i kata 'angle' miedzy nastepnymi punktami
+    def GetTargetSpeed(base, dist, angle):
+        spd = min(base, 1.2 * base * MM.softsign(10*dist) + 0.1*base)
+        print(spd)
+        return spd
+        
         
     #sprawdza, czy kulka utknela i trzeba jeszcze raz policzyc docelowa droge
     def CheckForBallStuck(self, _frame_array):

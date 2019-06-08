@@ -5,8 +5,12 @@ import heapq
 #zwrca znak liczby
 def sign(num):
     if num > 0: return 1.0
-    elif num < 0: return -1.0
+    if num < 0: return -1.0
     return 0.0
+
+def softsign(num):
+    if num < 0: return num / (1 - num)
+    return num / (1 + num)
 
 #interpolacja liniowa
 def lerp(a, b, c):
