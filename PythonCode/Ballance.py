@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
+    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
 
     import ImageProcessingModule as IPM
     import ServoControllerModule as SCM
@@ -182,11 +182,11 @@ if __name__ == '__main__':
                 angleRadiusFactor = 0.0
                 movementMode += 1
                 movementMode = 4 + movementMode % 2
-                #dataLogger.makePlot()
-                #dataLogger.clearData()
+                dataLogger.makePlot()
+                dataLogger.clearData()
             
             #dodawanie wpisow do DataLog'u
-            if False:
+            if True:
                 path_target = pathPlanner.getPathTarget()
                 dataLogger.addRecord("timestamp", time.perf_counter())
                 dataLogger.addRecord("ball_pos_x", ball_position_actual[0])

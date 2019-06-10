@@ -24,8 +24,9 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.2    #predkosc przechodzenia sciezki
+        self.path_speed = 0.3    #predkosc przechodzenia sciezki
         self.path_angle = 0.0    #aktualny kat miedzy kolejnymi punktami sciezki (do liczenia docelowej predkosci kulki)
+        self.path_angle_previous = 0.0 #poprzednia wartosc zmiennej 'self.path_angle'
         self.path_max_dist = 0.2**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
         self.path_position_smoothing = 0.5   #wspolczynnik wygladzania docelowej pozycjip
         self.path_position_smoothing_real = 0.0
@@ -82,7 +83,7 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 100, 255)
+        frame = cv2.inRange(frame, 120, 255)
         #kernel = np.ones((2,2), np.uint8)
         #frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
@@ -128,6 +129,7 @@ class PathPlanner:
                 
         PathPlanner.OptimizePath(self)
         PathPlanner.CalculateNextPathAngle(self, 0)
+        self.path_angle_previous = 9.99
         
         #DEBUG
         frame = copy.copy(self.obstacle_map)
@@ -188,7 +190,15 @@ class PathPlanner:
             
             #PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
             if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
-                self.path_position += PathPlanner.GetTargetSpeed(self.path_speed, dist - mant*dist, self.path_angle) * PathPlanner.path_sub_update_delta / dist
+                if mant < 0.5:
+                    #keypoint angle and keypoint distance on which target speed relies
+                    kp_angle = self.path_angle_previous
+                    kp_dist = dist*mant
+                else:
+                    kp_angle = self.path_angle
+                    kp_dist = dist - dist*mant
+                
+                self.path_position += PathPlanner.GetTargetSpeed(self.path_speed, kp_dist, kp_angle) * PathPlanner.path_sub_update_delta / dist
             if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
             #czy nalezy zaktualiowac kat sciezki?
             if int(self.path_position) > index: PathPlanner.CalculateNextPathAngle(self, index+1)
@@ -205,6 +215,7 @@ class PathPlanner:
         
     #oblicza nastepny kat miedzy punktami na sciezce
     def CalculateNextPathAngle(self, index):
+        self.path_angle_previous = self.path_angle
         if self.path_last_index < index+2:
             self.path_angle = -9.99
             return

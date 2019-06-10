@@ -1,4 +1,4 @@
-simulationMode = True
+simulationMode = False
 
 if not simulationMode:
     import TensorflowProcessingModule as TPM
