@@ -44,6 +44,8 @@ class PathPlanner:
         self.path_x = RawValue('f', 0.5)
         self.path_y = RawValue('f', 0.5)
         
+        self.frame_debug = None
+        
     def setBallPosition(self, pos):
         self.ball_pos_x.value = pos[1]
         self.ball_pos_y.value = pos[0]
@@ -138,7 +140,7 @@ class PathPlanner:
             for p in self.path:
                 frame[p[0], p[1]] = [255, 255, 0]
                 
-                
+        self.frame_debug = frame
         frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
         cv2.imshow("PathPlanner frame", frame)
         key = cv2.waitKey(1) & 0xFF
@@ -212,6 +214,15 @@ class PathPlanner:
         
         self.path_position_smoothing_real += self.path_position_smoothing_gain * PathPlanner.path_sub_update_delta
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
+        
+        #DEBUG
+        pos = PathPlanner.FromUnitaryToMapSpace(ball_pos, PathPlanner.obstacle_map_size)
+        frame = copy.copy(self.frame_debug)
+        if PathPlanner.isPointWithinMap(self, pos):
+            frame[pos[0], pos[1]] = [0, 0, 255]
+        frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("PathPlanner frame", frame)
+        key = cv2.waitKey(1) & 0xFF
         
     #oblicza nastepny kat miedzy punktami na sciezce
     def CalculateNextPathAngle(self, index):

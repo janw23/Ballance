@@ -6,6 +6,7 @@ if __name__ == '__main__':
     import PIDControllerModule as PIDCM
     import DataLoggerModule as DLM
     import PathPlannerModule as PPM
+    import ModelPredictorModule as MPM
     
     from time import sleep
     import time
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     imageProcessor = IPM.ImageProcessor(simulationCommunicator)
     servoController = SCM.ServoController()
     pathPlanner = PPM.PathPlanner()
+    modelPredictor = MPM.ModelPredictor()
         
     dataLogger = DLM.DataLogger()
     pidController = PIDCM.PIDController()
@@ -29,7 +31,7 @@ if __name__ == '__main__':
 
     pygame.init()
     pygame.display.set_mode((100, 100))
-
+    
     #roizpoczynanie procesu wykrywania kulki
     if simulationMode: simulationCommunicator.StartProcessing()
     imageProcessor.StartProcessing()
@@ -37,7 +39,7 @@ if __name__ == '__main__':
 
     targetDeltaTime = 1.0 / 40.0    #czas jednej iteracji programu sterujacego
     updatedTime = 0.0
-    servoUpdateDeltaTime = 1.0 / 80 #czas odswiezania pozycji serw
+    servoUpdateDeltaTime = 1.0 / 160 #czas odswiezania pozycji serw
     servoUpdatedTime = 0.0
 
     ball_position_actual = (0.0, 0.0)
@@ -52,12 +54,12 @@ if __name__ == '__main__':
     path_target_index = 0
     targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
-    movementMode = 0
-    modeChangeTimeDelta = 8 #czas po jakim zmieniana jest trajektoria kulki
+    movementMode = 4
+    modeChangeTimeDelta = 5 #czas po jakim zmieniana jest trajektoria kulki
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
-    duration = 10000
+    duration = 9000000
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -69,8 +71,15 @@ if __name__ == '__main__':
         if timeStart - updatedTime >= targetDeltaTime:
             updatedTime = time.perf_counter()
             
+            #aktualizacja model predictora
+            modelPredictor.SetServos(servoController.servo_actual_pos)
+            modelPredictor.update(targetDeltaTime)
+            
             #pobranie pozycji kulki
-            ball_position_actual = imageProcessor.getBallPosition()
+            ball_position_actual = modelPredictor.GetPosition()#imageProcessor.getBallPosition()
+            if abs(ball_position_actual[0]) > 1 or abs(ball_position_actual[1]) > 1:
+                modelPredictor.Reset()
+                
             if ball_position_actual[0] >= 0: pidController.setActualValue(ball_position_actual)
             else: pidController.setActualValue(pidController.value_target)
                 
@@ -89,51 +98,52 @@ if __name__ == '__main__':
                 pathPlanner.setTargetPosition(targetPos)
             #print(str(pidController.value_target))
             
-            #obslugiwanie wejscia z klawiatury
             killLoop = False
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_g:
-                        pidController.increaseKP()
-                        
-                    elif event.key == pygame.K_b:
-                        pidController.decreaseKP()
-                        
-                    elif event.key == pygame.K_h:
-                        pidController.increaseKI()
-                        
-                    elif event.key == pygame.K_n:
-                        pidController.decreaseKI()
-                        
-                    elif event.key == pygame.K_j:
-                        pidController.increaseKD()
-                        
-                    elif event.key == pygame.K_m:
-                        pidController.decreaseKD()
-                        
-                    elif event.key == pygame.K_q:
-                        killLoop = True
-                        
-                    elif event.key == pygame.K_UP:
-                        targetPos[1] -= moveSpeed
-                        
-                    elif event.key == pygame.K_DOWN:
-                        targetPos[1] += moveSpeed
-                        
-                    elif event.key == pygame.K_RIGHT:
-                        targetPos[0] += moveSpeed
-                        
-                    elif event.key == pygame.K_LEFT:
-                        targetPos[0] -= moveSpeed
-                        
-                    elif event.key == pygame.K_p:
-                        angleSpeed += 0.1
-                        print("angleSpeed = " + str(angleSpeed))
-                        
-                    elif event.key == pygame.K_o:
-                        angleSpeed -= 0.1
-                        print("angleSpeed = " + str(angleSpeed))
-                        
+            if False:
+                #obslugiwanie wejscia z klawiatury
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_g:
+                            pidController.increaseKP()
+                            
+                        elif event.key == pygame.K_b:
+                            pidController.decreaseKP()
+                            
+                        elif event.key == pygame.K_h:
+                            pidController.increaseKI()
+                            
+                        elif event.key == pygame.K_n:
+                            pidController.decreaseKI()
+                            
+                        elif event.key == pygame.K_j:
+                            pidController.increaseKD()
+                            
+                        elif event.key == pygame.K_m:
+                            pidController.decreaseKD()
+                            
+                        elif event.key == pygame.K_q:
+                            killLoop = True
+                            
+                        elif event.key == pygame.K_UP:
+                            targetPos[1] -= moveSpeed
+                            
+                        elif event.key == pygame.K_DOWN:
+                            targetPos[1] += moveSpeed
+                            
+                        elif event.key == pygame.K_RIGHT:
+                            targetPos[0] += moveSpeed
+                            
+                        elif event.key == pygame.K_LEFT:
+                            targetPos[0] -= moveSpeed
+                            
+                        elif event.key == pygame.K_p:
+                            angleSpeed += 0.1
+                            print("angleSpeed = " + str(angleSpeed))
+                            
+                        elif event.key == pygame.K_o:
+                            angleSpeed -= 0.1
+                            print("angleSpeed = " + str(angleSpeed))
+                            
             if killLoop:
                 break
             
@@ -141,52 +151,18 @@ if __name__ == '__main__':
             servoController.moveServo(0, round(pidController.x_servo))
             servoController.moveServo(1, -round(pidController.y_servo))
             
-            #dostepne trajektorie ruchu kulki
-            #targetPos = [0, 0]
             if False:
-                if movementMode == 0:    #ksztalt osemki
-                    targetPos[0] = math.sin(angle)
-                    targetPos[1] = math.sin(2.0 * angle)
-                elif movementMode == 1:  #ksztalt okregu
-                    targetPos[0] = math.sin(angle)
-                    targetPos[1] = math.cos(angle)
-                elif movementMode == 2:   #ksztalt paraboli
-                    targetPos[0] = math.sin(angle)
-                    targetPos[1] = math.cos(2.0 * angle)
-                elif movementMode == 3:   #ksztalt litery S
-                    targetPos[0] = math.sin(angle)
-                    targetPos[1] = math.sin(2.0 * angle)
-                    if angle > 2:
-                        angleSpeed = -angleSpeed
-                        angle = 2
-                    elif angle < -2:
-                        angleSpeed = -angleSpeed
-                        angle = -2
-                elif movementMode == 4:
-                    targetPos[0] = -0.15
-                elif movementMode == 5:
-                    targetPos[0] = 0.15
-                    
-            #targetPos[0] = 0.5 + targetPos[0]#angleRadiusFactor * angleRadius * targetPos[0]
-            #targetPos[1] = 0.5 + targetPos[1]#angleRadiusFactor * angleRadius * targetPos[1]
-            #ustawianie docelowej pozycji kulki
-            #pidController.setTargetValue(targetPos[0], targetPos[1])
-            #pathPlanner.setTargetPosition(tuple(targetPos))
-            angle += angleSpeed * targetDeltaTime
-            angleRadiusFactor += 0.25 * targetDeltaTime
-            angleRadiusFactor = min(angleRadiusFactor, 1.0)
-            
-            modeChangeTimer += targetDeltaTime
-            if modeChangeTimer >= modeChangeTimeDelta:
-                modeChangeTimer = 0.0
-                angleRadiusFactor = 0.0
-                movementMode += 1
-                movementMode = 4 + movementMode % 2
-                dataLogger.makePlot()
-                dataLogger.clearData()
+                modeChangeTimer += targetDeltaTime
+                if modeChangeTimer >= modeChangeTimeDelta:
+                    modeChangeTimer = 0.0
+                    angleRadiusFactor = 0.0
+                    movementMode += 1
+                    movementMode = 4 + movementMode % 2
+                    #dataLogger.makePlot()
+                    #dataLogger.clearData()
             
             #dodawanie wpisow do DataLog'u
-            if True:
+            if False:
                 path_target = pathPlanner.getPathTarget()
                 dataLogger.addRecord("timestamp", time.perf_counter())
                 dataLogger.addRecord("ball_pos_x", ball_position_actual[0])
@@ -218,7 +194,7 @@ if __name__ == '__main__':
             if simulationMode:
                 simulationCommunicator.moveServos(servoController.servo_actual_pos)
                 
-        sleep(0.004) #4 milisekundy na odpoczynek :)
+        #sleep(0.004) #4 milisekundy na odpoczynek :)
             
     print("Stopping program")
     #dataLogger.saveToFile("BallanceDataLog")

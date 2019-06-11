@@ -149,18 +149,16 @@ class ImageProcessor:
         tracker_frame = cv2.cvtColor(tracker_frame, cv2.COLOR_BGR2GRAY)
         
         #analiza klatki z uzyciem sieci neuronowych
-        result = self.tensorflowProcessor.getBallPosition(tracker_frame)
-        result = np.round(result * self.ballTracker_size).astype("int")
-        
+        result = self.tensorflowProcessor.getBallPosition(tracker_frame) * self.ballTracker_size        
         self.ballTracker_result[0] = self.ballTracker_pos[0] + result[0]
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
         #zaznaczanie wizualne pozycji kulki
-        cv2.circle(self.frame_original, tuple(self.ballTracker_result), 1, (0, 255, 0), -1)
+        cv2.circle(self.frame_original, tuple(np.round(self.ballTracker_result).astype("int")), 1, (0, 255, 0), -1)
         
         #aktualizacja pozycji trackera
-        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], self.ballTracker_result[0] - self.ballTracker_size // 2, 0.7)
-        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], self.ballTracker_result[1] - self.ballTracker_size // 2, 0.7)
+        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], round(self.ballTracker_result[0]) - self.ballTracker_size // 2, 0.7)
+        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], round(self.ballTracker_result[1]) - self.ballTracker_size // 2, 0.7)
     
     #znajduje pozycje krawedzi plyty
     def FindBoardCorners(self):
@@ -205,7 +203,7 @@ class ImageProcessor:
     def ChangePerspective(self):
         pts = np.array(self.corners, np.float32)
         res = self.detection_image_resolution
-        enlarge = 2
+        enlarge = 3
         pts2 = np.float32([[enlarge,enlarge],[res[0]-enlarge,enlarge],[res[0]-enlarge, res[1]-enlarge], [enlarge, res[1]-enlarge]])
 
         M = cv2.getPerspectiveTransform(pts, pts2)
