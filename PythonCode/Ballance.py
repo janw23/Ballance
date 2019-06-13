@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
+    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
 
     import ImageProcessingModule as IPM
     import ServoControllerModule as SCM
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
     movementMode = 4
-    modeChangeTimeDelta = 8 #czas po jakim zmieniana jest trajektoria kulki
+    modeChangeTimeDelta = 5 #czas po jakim zmieniana jest trajektoria kulki
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
@@ -76,9 +76,7 @@ if __name__ == '__main__':
             modelPredictor.update(targetDeltaTime)
             
             #pobranie pozycji kulki
-            ball_position_actual = modelPredictor.GetPosition()#imageProcessor.getBallPosition()
-            if abs(ball_position_actual[0]) > 1 or abs(ball_position_actual[1]) > 1:
-                modelPredictor.Reset()
+            ball_position_actual = imageProcessor.getBallPosition()
                 
             if ball_position_actual[0] >= 0: pidController.setActualValue(ball_position_actual)
             else: pidController.setActualValue(pidController.value_target)
@@ -90,6 +88,12 @@ if __name__ == '__main__':
             #aktualizacja pozycji kulki w pathplannerze
             pathPlanner.setBallPosition(ball_position_actual)
             pidController.setTargetValue(pathPlanner.getPathTarget())
+            
+            #DEBUG
+            predicted_pos = modelPredictor.GetPosition()
+            pathPlanner.setPredictedBallPosition(modelPredictor.GetPosition())
+            if abs(predicted_pos[0]) > 1 or abs(predicted_pos[1]) > 1:
+                modelPredictor.Reset()
             
             #przechodzenie do kolejnego waypoint'a
             if MM.sqrMagnitude(ball_position_actual[0] - targetPos[0], ball_position_actual[1] - targetPos[1]) < 0.01:
@@ -151,7 +155,7 @@ if __name__ == '__main__':
             servoController.moveServo(0, round(pidController.x_servo))
             servoController.moveServo(1, -round(pidController.y_servo))
             
-            if False:
+            if True:
                 modeChangeTimer += targetDeltaTime
                 if modeChangeTimer >= modeChangeTimeDelta:
                     modeChangeTimer = 0.0
@@ -162,7 +166,7 @@ if __name__ == '__main__':
                     dataLogger.clearData()
             
             #dodawanie wpisow do DataLog'u
-            if False:
+            if True:
                 path_target = pathPlanner.getPathTarget()
                 dataLogger.addRecord("timestamp", time.perf_counter())
                 dataLogger.addRecord("ball_pos_x", ball_position_actual[0])
@@ -180,7 +184,7 @@ if __name__ == '__main__':
                 dataLogger.addRecord("error_sum_y", pidController.y_error_sum)
                 dataLogger.addRecord("derivative_x", pidController.x_derivative)
                 dataLogger.addRecord("derivative_y", pidController.y_derivative)
-                dataLogger.addRecord("servo_actual_x", servoController.servo_actual_pos[0])
+                dataLogger.addRecord("servo_actual_x", servoController.servo_actual_pos[0]*0.001)
                 dataLogger.addRecord("servo_actual_y", servoController.servo_actual_pos[1])
                 dataLogger.addRecord("servo_target_x", servoController.servo_target_pos[0])
                 dataLogger.addRecord("servo_target_y", servoController.servo_target_pos[1])

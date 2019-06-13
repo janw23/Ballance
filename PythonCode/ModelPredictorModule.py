@@ -4,14 +4,14 @@ import MathModule as MM
 #modul przeiwdywania przyszlej pozycji kulki
 class ModelPredictor:
     
-    eta = 0.000001    #stala 'niedokladnosci' obliczen
+    eta = 0.00001    #stala 'niedokladnosci' obliczen
     modelDelay = 0.2 #czas opoznienia reakcji rzeczywistego urzadzenia
     gravity = 9.81
-    anglePerServoSignal = 10.596 * 0.001 * 2 * math.pi / 180 #kat nachylenia plyty przypadajacy na sygnal pozycji serw
+    anglePerServoSignal = 7.5 * 0.001 * 2 * math.pi / 180 #kat nachylenia plyty przypadajacy na sygnal pozycji serw
     boardSize = 1 / 0.2 #dlugosc boku platformy
     servo_speed = 10000    #'prawdziwa' szybkosc ruchu serw
 
-    friction_static = (0.01 * gravity) ** 2    #wspolczynnik tarcia statycznego
+    friction_static = (0.04 * gravity) ** 2    #wspolczynnik tarcia statycznego
     friction_dynamic = 0.002 * gravity    #wspolczynnik tarcia dynamicznego
 
     def __init__(self):
@@ -21,18 +21,18 @@ class ModelPredictor:
         self.servo = [0.0, 0.0]
         self.servo_target = [0.0, 0.0]    #docelowa pozycja serwa
 
-        self.signal_delayer = MM.SignalDelay(4, (0.5, 0.5))
+        #self.signal_delayer = MM.SignalDelay(4, (0.5, 0.5))
 
     def GetPosition(self):
-        return self.signal_delayer.get()#tuple(self.position)
+        return tuple(self.position)  #self.signal_delayer.get()
     
     def Reset(self):
         self.position = [0.5, 0.5]
         self.velocity = [0.0, 0.0]
     
     def SetServos(self, values):
-        self.servo_target[0] = MM.clamp(values[0], -1000, 1000)
-        self.servo_target[1] = MM.clamp(-values[1], -1000, 1000)
+        self.servo_target[0] = values[0]
+        self.servo_target[1] = -values[1]
 
     #aktualizuje pozycje serw
     def updateServos(self, deltaTime):
@@ -72,5 +72,5 @@ class ModelPredictor:
         self.position[0] += self.velocity[0] * ModelPredictor.boardSize * deltaTime
         self.position[1] += self.velocity[1] * ModelPredictor.boardSize * deltaTime
 
-        self.signal_delayer.push(tuple(self.position))
-        self.signal_delayer.tick()
+        #self.signal_delayer.push(tuple(self.position))
+        #self.signal_delayer.tick()

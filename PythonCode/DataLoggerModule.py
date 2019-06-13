@@ -63,12 +63,12 @@ class DataLogger:
         
     def makePlot_hidden(self):
         t = self.data2write['timestamp']
-        actual = self.data2write['target_pos_x']
+        actual = self.data2write['servo_actual_x']
         target = self.data2write['ball_pos_x']
         
-        plt.plot(t, actual, 'r', label='target')
+        plt.plot(t, actual, 'r', label='servo')
         plt.plot(t, target, 'b', label='pos')
         plt.legend()
-        plt.ylim([0, 1])
+        plt.ylim([-1, 1])
         plt.show(block=False)
-        time.sleep(7)
+        time.sleep(4)

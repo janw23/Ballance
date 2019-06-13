@@ -44,11 +44,18 @@ class PathPlanner:
         self.path_x = RawValue('f', 0.5)
         self.path_y = RawValue('f', 0.5)
         
+        self.ball_predicted_pos_x = RawValue('f', 0.5)
+        self.ball_predicted_pos_y = RawValue('f', 0.5)
+        
         self.frame_debug = None
         
     def setBallPosition(self, pos):
         self.ball_pos_x.value = pos[1]
         self.ball_pos_y.value = pos[0]
+        
+    def setPredictedBallPosition(self, pos):
+        self.ball_predicted_pos_x.value = pos[1]
+        self.ball_predicted_pos_y.value = pos[0]
         
     def setTargetPosition(self, pos):
         self.target_pos_x.value = pos[1]
@@ -216,7 +223,7 @@ class PathPlanner:
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
         
         #DEBUG
-        pos = PathPlanner.FromUnitaryToMapSpace(ball_pos, PathPlanner.obstacle_map_size)
+        pos = PathPlanner.FromUnitaryToMapSpace((self.ball_predicted_pos_x.value, self.ball_predicted_pos_y.value), PathPlanner.obstacle_map_size)
         frame = copy.copy(self.frame_debug)
         if PathPlanner.isPointWithinMap(self, pos):
             frame[pos[0], pos[1]] = [0, 0, 255]

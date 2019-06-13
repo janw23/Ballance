@@ -1,5 +1,5 @@
 from __future__ import division
-simulationMode = True
+simulationMode = False
 
 if not simulationMode:
     import sys
