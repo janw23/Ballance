@@ -1,5 +1,5 @@
 if __name__ == '__main__':
-    simulationMode = False    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
+    simulationMode = True    #czy uruchomic program w trybie symulacji? wymaga rowniez zmiany w ServoControllerModule.py oraz w ImageProcessingModule.py
 
     import ImageProcessingModule as IPM
     import ServoControllerModule as SCM
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     pygame.init()
     pygame.display.set_mode((100, 100))
     
-    #roizpoczynanie procesu wykrywania kulki
+    #rozpoczynanie procesu wykrywania kulki
     if simulationMode: simulationCommunicator.StartProcessing()
     imageProcessor.StartProcessing()
     pathPlanner.startProcessing(imageProcessor.obstacle_map)
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     targetPos = path_targets[path_target_index]
     moveSpeed = 0.05
     movementMode = 4
-    modeChangeTimeDelta = 5 #czas po jakim zmieniana jest trajektoria kulki
+    modeChangeTimeDelta = 8 #czas po jakim zmieniana jest trajektoria kulki
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
@@ -99,7 +99,7 @@ if __name__ == '__main__':
             #print(str(pidController.value_target))
             
             killLoop = False
-            if False:
+            if True:
                 #obslugiwanie wejscia z klawiatury
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
@@ -158,8 +158,8 @@ if __name__ == '__main__':
                     angleRadiusFactor = 0.0
                     movementMode += 1
                     movementMode = 4 + movementMode % 2
-                    #dataLogger.makePlot()
-                    #dataLogger.clearData()
+                    dataLogger.makePlot()
+                    dataLogger.clearData()
             
             #dodawanie wpisow do DataLog'u
             if False:
@@ -194,7 +194,7 @@ if __name__ == '__main__':
             if simulationMode:
                 simulationCommunicator.moveServos(servoController.servo_actual_pos)
                 
-        #sleep(0.004) #4 milisekundy na odpoczynek :)
+        sleep(0.002) #4 milisekundy na odpoczynek :)
             
     print("Stopping program")
     #dataLogger.saveToFile("BallanceDataLog")

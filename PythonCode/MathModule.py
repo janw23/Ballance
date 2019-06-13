@@ -115,3 +115,25 @@ class MedianFilter:
     #zwraca przefiltrowana wartosc
     def getValue(self):
         return Median(self.data)
+
+#pozwala na symulowanie opoznienia w pomiarach
+class SignalDelay:
+    #'delay' oznacza, ile pomiarow jest miedzy aktualna wartoscia, a opozniana
+    def __init__(self, delay, dtype):
+        self.delay = delay
+        self.data = [dtype] * delay
+        self.index = 0
+
+    #dodaje element do struktury danych
+    def push(self, element):
+        self.data[self.index] = element
+
+    #zwraca element opozniony o 'delay'
+    def get(self):
+        return self.data[self.index]
+
+    #symuluje uplyw czasu o 1 jednostke; musi byc wywolane pomiedzy uzyciem 'push' a 'get'
+    def tick(self):
+        self.index += 1
+        if self.index == self.delay:
+            self.index = 0
