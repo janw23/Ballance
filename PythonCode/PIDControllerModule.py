@@ -12,7 +12,7 @@ class PIDController:
         print("KI = " + str(self.KI))
         
     def increaseKD(self):
-        self.KD += 50
+        self.KD += 1000
         print("KD = " + str(self.KD))        
     def decreaseKP(self):
         self.KP -= 50
@@ -23,7 +23,7 @@ class PIDController:
         print("KI = " + str(self.KI))
         
     def decreaseKD(self):
-        self.KD -= 50
+        self.KD -= 1000
         print("KD = " + str(self.KD))
         
     #ustawia aktualna wartosc
@@ -54,7 +54,7 @@ class PIDController:
         #wspolczynniki kontroli
         self.KP = 1.3 * 1000   #wzmocnienie czesci proporcjonalnej
         self.KI = 0.8 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 0.8 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KD = 120 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -85,8 +85,8 @@ class PIDController:
         #print("Error = ( " + str(self.x_error) + "; " + str(self.y_error) + ")")
 
         #liczenie pochodnej
-        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 0.3)
-        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 0.3)
+        self.x_derivative = MM.lerp(self.x_derivative, MM.signedSqr(self.x_error - self.x_prev_error) / deltaTime, 1.0)
+        self.y_derivative = MM.lerp(self.y_derivative, MM.signedSqr(self.y_error - self.y_prev_error) / deltaTime, 1.0)
 
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error

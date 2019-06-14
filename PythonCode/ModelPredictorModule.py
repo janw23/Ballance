@@ -7,7 +7,7 @@ class ModelPredictor:
     eta = 0.00001    #stala 'niedokladnosci' obliczen
     modelDelay = 0.2 #czas opoznienia reakcji rzeczywistego urzadzenia
     gravity = 9.81
-    anglePerServoSignal = 7.5 * 0.001 * 2 * math.pi / 180 #kat nachylenia plyty przypadajacy na sygnal pozycji serw
+    anglePerServoSignal = 7.5 * 0.001 * math.pi / 180 #kat nachylenia plyty przypadajacy na sygnal pozycji serw
     boardSize = 1 / 0.2 #dlugosc boku platformy
     servo_speed = 10000    #'prawdziwa' szybkosc ruchu serw
 

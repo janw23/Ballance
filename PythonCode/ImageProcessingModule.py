@@ -117,11 +117,12 @@ class ImageProcessor:
                 pos = self.simulationCommunicator.getBallPosition()
                 self.ballTracker_result[0] = pos[0] * ImageProcessor.detection_image_resolution_cropped[0]
                 self.ballTracker_result[1] = pos[1] * ImageProcessor.detection_image_resolution_cropped[1]
-            ImageProcessor.UpdateObstacleMap(self)
             
             #ustawianie znalezionej pozycji kulki w zmiennych dzielonych miedzy procesami
             self.result_x.value = self.ballTracker_result[0] / ImageProcessor.detection_image_resolution_cropped[0]
             self.result_y.value = self.ballTracker_result[1] / ImageProcessor.detection_image_resolution_cropped[1]
+            
+            ImageProcessor.UpdateObstacleMap(self)
             
             #cv2.imshow("Frame debug", self.frame_debug)
             if saveCounter < saveCount:
@@ -148,8 +149,11 @@ class ImageProcessor:
                                             self.ballTracker_pos[0]:self.ballTracker_pos[0]+self.ballTracker_size]
         tracker_frame = cv2.cvtColor(tracker_frame, cv2.COLOR_BGR2GRAY)
         
+        cv2.imshow("Tracker", tracker_frame)
+        #cv2.imshow("Tracker denoised", cv2.fastNlMeansDenoising(tracker_frame, None, 10, 7, 21))
+        
         #analiza klatki z uzyciem sieci neuronowych
-        result = self.tensorflowProcessor.getBallPosition(tracker_frame) * self.ballTracker_size        
+        result = self.tensorflowProcessor.getBallPosition(tracker_frame) * (self.ballTracker_size-1)        
         self.ballTracker_result[0] = self.ballTracker_pos[0] + result[0]
         self.ballTracker_result[1] = self.ballTracker_pos[1] + result[1]
         
@@ -157,8 +161,8 @@ class ImageProcessor:
         cv2.circle(self.frame_original, tuple(np.round(self.ballTracker_result).astype("int")), 1, (0, 255, 0), -1)
         
         #aktualizacja pozycji trackera
-        self.ballTracker_pos[0] = MM.lerp(self.ballTracker_pos[0], round(self.ballTracker_result[0]) - self.ballTracker_size // 2, 0.7)
-        self.ballTracker_pos[1] = MM.lerp(self.ballTracker_pos[1], round(self.ballTracker_result[1]) - self.ballTracker_size // 2, 0.7)
+        self.ballTracker_pos[0] = round(self.ballTracker_result[0]) - self.ballTracker_size // 2
+        self.ballTracker_pos[1] = round(self.ballTracker_result[1]) - self.ballTracker_size // 2
     
     #znajduje pozycje krawedzi plyty
     def FindBoardCorners(self):

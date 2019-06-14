@@ -12,6 +12,11 @@ def softsign(num):
     if num < 0: return num / (1 - num)
     return num / (1 + num)
 
+#zwraca kwadrat liczby, ale z jej znakiem
+def signedSqr(num):
+    if num >= 0: return num * num
+    return -num * num
+
 #interpolacja liniowa
 def lerp(a, b, c):
     return c*b + (1-c) * a

@@ -59,7 +59,7 @@ if __name__ == '__main__':
     modeChangeTimer = 0.0
 
     #jak dlugo wykonywany ma byc program
-    duration = 9000000
+    duration = 6000000
     timeout = time.time() + duration
     ball_just_found = True    #czy kulka dopiero zostala znaleziona i nalezy zresetowac predkosc?
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
             servoController.moveServo(0, round(pidController.x_servo))
             servoController.moveServo(1, -round(pidController.y_servo))
             
-            if True:
+            if False:
                 modeChangeTimer += targetDeltaTime
                 if modeChangeTimer >= modeChangeTimeDelta:
                     modeChangeTimer = 0.0
@@ -166,7 +166,7 @@ if __name__ == '__main__':
                     dataLogger.clearData()
             
             #dodawanie wpisow do DataLog'u
-            if True:
+            if False:
                 path_target = pathPlanner.getPathTarget()
                 dataLogger.addRecord("timestamp", time.perf_counter())
                 dataLogger.addRecord("ball_pos_x", ball_position_actual[0])

@@ -92,7 +92,7 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 120, 255)
+        frame = cv2.inRange(frame, 40, 255)
         #kernel = np.ones((2,2), np.uint8)
         #frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
@@ -223,13 +223,14 @@ class PathPlanner:
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
         
         #DEBUG
-        pos = PathPlanner.FromUnitaryToMapSpace((self.ball_predicted_pos_x.value, self.ball_predicted_pos_y.value), PathPlanner.obstacle_map_size)
-        frame = copy.copy(self.frame_debug)
-        if PathPlanner.isPointWithinMap(self, pos):
-            frame[pos[0], pos[1]] = [0, 0, 255]
-        frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
-        cv2.imshow("PathPlanner frame", frame)
-        key = cv2.waitKey(1) & 0xFF
+        if False:
+            pos = PathPlanner.FromUnitaryToMapSpace((self.ball_predicted_pos_x.value, self.ball_predicted_pos_y.value), PathPlanner.obstacle_map_size)
+            frame = copy.copy(self.frame_debug)
+            if PathPlanner.isPointWithinMap(self, pos):
+                frame[pos[0], pos[1]] = [0, 0, 255]
+            frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
+            cv2.imshow("PathPlanner frame", frame)
+            key = cv2.waitKey(1) & 0xFF
         
     #oblicza nastepny kat miedzy punktami na sciezce
     def CalculateNextPathAngle(self, index):
@@ -251,7 +252,7 @@ class PathPlanner:
         
     #zwraca docelowa predkosc kulki na podstawie predkosci podstawowej 'base', odlegosci 'dist' do nastepnego punktu i kata 'angle' miedzy nastepnymi punktami
     def GetTargetSpeed(base, dist, angle):
-        spd = min(base, base * MM.softsign(5*dist) + base * (1.2 - min((1.57 - 0.3/(0.1+abs(angle))) * 0.63661977, 1.0)))
+        spd = min(base, base * MM.softsign(4*dist) + base * (1.3 - min((1.57 - 0.3/(0.1+abs(angle))) * 0.7549297, 1.0)))
         #print("angle = " + str(angle))
         #print("dist = " + str(dist))
         #print("speed = " + str(spd))
