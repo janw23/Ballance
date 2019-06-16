@@ -4,26 +4,26 @@ class PIDController:
     
     #operacje zmiany pidow
     def increaseKP(self):
-        self.KP += 50
+        self.KP += 100
         print("KP = " + str(self.KP))
         
     def increaseKI(self):
-        self.KI += 50
+        self.KI += 100
         print("KI = " + str(self.KI))
         
     def increaseKD(self):
-        self.KD += 1000
+        self.KD += 100
         print("KD = " + str(self.KD))        
     def decreaseKP(self):
-        self.KP -= 50
+        self.KP -= 100
         print("KP = " + str(self.KP))
         
     def decreaseKI(self):
-        self.KI -= 50
+        self.KI -= 100
         print("KI = " + str(self.KI))
         
     def decreaseKD(self):
-        self.KD -= 1000
+        self.KD -= 100
         print("KD = " + str(self.KD))
         
     #ustawia aktualna wartosc
@@ -53,8 +53,8 @@ class PIDController:
 
         #wspolczynniki kontroli
         self.KP = 1.3 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.8 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 120 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KI = 0.3 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 3 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -81,18 +81,21 @@ class PIDController:
         #liczenie bledu
         self.x_error = self.value_target[0] - self.value_actual[0]
         self.y_error = self.value_target[1] - self.value_actual[1]
-        
-        #print("Error = ( " + str(self.x_error) + "; " + str(self.y_error) + ")")
 
         #liczenie pochodnej
-        self.x_derivative = MM.lerp(self.x_derivative, MM.signedSqr(self.x_error - self.x_prev_error) / deltaTime, 1.0)
-        self.y_derivative = MM.lerp(self.y_derivative, MM.signedSqr(self.y_error - self.y_prev_error) / deltaTime, 1.0)
+        self.x_derivative = MM.lerp(self.x_derivative, (self.x_error - self.x_prev_error) / deltaTime, 1.0)
+        self.y_derivative = MM.lerp(self.y_derivative, (self.y_error - self.y_prev_error) / deltaTime, 1.0)
+
+        #pochodna kwadratowa
+        derivative_magnitude = MM.magnitude(self.x_derivative, self.y_derivative)
+        self.x_derivative *= derivative_magnitude
+        self.y_derivative *= derivative_magnitude
 
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error
 
-        self.x_error_sum += self.x_error * deltaTime
-        self.y_error_sum += self.y_error * deltaTime
+        self.x_error_sum += self.x_error * deltaTime / (abs(self.x_derivative)+1)
+        self.y_error_sum += self.y_error * deltaTime / (abs(self.y_derivative)+1)
         
         #zmiana pozycji serw z uwzglednieniem bledu biezacego, przyszlego oraz przeszlego
         self.x_servo = (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * self.KI)
@@ -101,5 +104,5 @@ class PIDController:
         self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
         self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
         
-        self.x_error_sum = MM.clamp(self.x_error_sum, -1.0, 1.0) * 0.99
-        self.y_error_sum = MM.clamp(self.y_error_sum, -1.0, 1.0) * 0.99
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1, 1) * 0.9 * 40 * deltaTime
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1, 1) * 0.9 * 40 * deltaTime

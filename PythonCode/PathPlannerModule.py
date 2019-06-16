@@ -24,13 +24,13 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.3    #predkosc przechodzenia sciezki
+        self.path_speed = 0.5    #predkosc przechodzenia sciezki
         self.path_angle = 0.0    #aktualny kat miedzy kolejnymi punktami sciezki (do liczenia docelowej predkosci kulki)
         self.path_angle_previous = 0.0 #poprzednia wartosc zmiennej 'self.path_angle'
-        self.path_max_dist = 0.2**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
+        self.path_max_dist = 0.25**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
         self.path_position_smoothing = 0.5   #wspolczynnik wygladzania docelowej pozycjip
         self.path_position_smoothing_real = 0.0
-        self.path_position_smoothing_gain = 0.5   #szybkosc odzyskiwania wygladzania po ustawieniu na zero
+        self.path_position_smoothing_gain = 0.3   #szybkosc odzyskiwania wygladzania po ustawieniu na zero
         
         self.path_stuck_pos = [0, 0] #pozycja, wzgledem ktorej sprawdzana jest odleglosc kulki w celu stwierdzenia utkniecia
         self.path_stuck_dist = 0.05**2 #odleglosc od danego miejsca, ktora kulka musi przekroczyc, zeby nie byla uznana za utknieta
@@ -189,6 +189,8 @@ class PathPlanner:
         path_last_index = self.path_last_index
         A = PathPlanner.FromMapToUnitarySpace(path[index])
         
+        speed_debug = 0
+        
         if path_last_index > 0:
             B = PathPlanner.FromMapToUnitarySpace(path[index+1])
             dist = MM.distance(A, B)
@@ -201,13 +203,15 @@ class PathPlanner:
             if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
                 if mant < 0.5:
                     #keypoint angle and keypoint distance on which target speed relies
-                    kp_angle = self.path_angle_previous
+                    #kp_angle = self.path_angle_previous
                     kp_dist = dist*mant
                 else:
-                    kp_angle = self.path_angle
+                    #kp_angle = self.path_angle
                     kp_dist = dist - dist*mant
+                kp_angle = MM.lerp(self.path_angle_previous, self.path_angle, mant)
                 
-                self.path_position += PathPlanner.GetTargetSpeed(self.path_speed, kp_dist, kp_angle) * PathPlanner.path_sub_update_delta / dist
+                speed_debug = PathPlanner.GetTargetSpeed(self.path_speed, kp_dist, kp_angle)
+                self.path_position += speed_debug * PathPlanner.path_sub_update_delta / dist#PathPlanner.GetTargetSpeed(self.path_speed, kp_dist, kp_angle) * PathPlanner.path_sub_update_delta / dist
             if self.path_position >= self.path_last_index: self.path_position = self.path_last_index - 0.00001
             #czy nalezy zaktualiowac kat sciezki?
             if int(self.path_position) > index: PathPlanner.CalculateNextPathAngle(self, index+1)
@@ -223,11 +227,12 @@ class PathPlanner:
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
         
         #DEBUG
-        if False:
-            pos = PathPlanner.FromUnitaryToMapSpace((self.ball_predicted_pos_x.value, self.ball_predicted_pos_y.value), PathPlanner.obstacle_map_size)
-            frame = copy.copy(self.frame_debug)
+        if True:
+            speed_debug /= self.path_speed
+            pos = PathPlanner.FromUnitaryToMapSpace(ball_pos, PathPlanner.obstacle_map_size)
+            frame = self.frame_debug#copy.copy(self.frame_debug)
             if PathPlanner.isPointWithinMap(self, pos):
-                frame[pos[0], pos[1]] = [0, 0, 255]
+                frame[pos[0], pos[1]] = [0, (1.0-speed_debug) * 255, speed_debug * 255]
             frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
             cv2.imshow("PathPlanner frame", frame)
             key = cv2.waitKey(1) & 0xFF
@@ -248,11 +253,11 @@ class PathPlanner:
         B = (path[c][0] - path[b][0], path[c][1] - path[b][1])
         dot = MM.dot(A, B)
         cross = MM.cross(A, B)
-        self.path_angle = math.atan2(cross, dot)
+        self.path_angle = abs(math.atan2(cross, dot))
         
     #zwraca docelowa predkosc kulki na podstawie predkosci podstawowej 'base', odlegosci 'dist' do nastepnego punktu i kata 'angle' miedzy nastepnymi punktami
     def GetTargetSpeed(base, dist, angle):
-        spd = min(base, base * MM.softsign(4*dist) + base * (1.3 - min((1.57 - 0.3/(0.1+abs(angle))) * 0.7549297, 1.0)))
+        spd = min(base, base * 2.5 *dist + base * (1.2 - min((1.57 - 0.3/(0.1+abs(angle))) * 0.7549297, 1.0)))
         #print("angle = " + str(angle))
         #print("dist = " + str(dist))
         #print("speed = " + str(spd))
@@ -318,7 +323,7 @@ class PathPlanner:
                     if u not in cost or new_cost < cost[u]:
                         cost[u] = new_cost
                         center = PathPlanner.obstacle_map_size // 2
-                        que.push(u, new_cost + MM.sqrMagnitude(v[0] - u[0], v[1] - u[1]) + self.proximity_map[u[0], u[1]] + int(MM.sqrMagnitude(center - u[0], center - u[1])))
+                        que.push(u, new_cost + MM.sqrMagnitude(v[0] - u[0], v[1] - u[1]) + self.proximity_map[u[0], u[1]] + int(0.1*MM.sqrMagnitude(center - u[0], center - u[1])))
                         visited_from[u] = v
         
         path = []
