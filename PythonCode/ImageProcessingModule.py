@@ -22,7 +22,7 @@ class ImageProcessor:
     detection_image_resolution_cropped = (-1, -1)
     
     #rozmiar bitmapy przeszkod
-    obstacle_map_size = 30
+    obstacle_map_size = 60
     obstacle_map_update_delta = 40
         
     def __init__(self, _simulationCommunicator=None):
@@ -149,7 +149,7 @@ class ImageProcessor:
                                             self.ballTracker_pos[0]:self.ballTracker_pos[0]+self.ballTracker_size]
         tracker_frame = cv2.cvtColor(tracker_frame, cv2.COLOR_BGR2GRAY)
         
-        cv2.imshow("Tracker", tracker_frame)
+        #cv2.imshow("Tracker", tracker_frame)
         #cv2.imshow("Tracker denoised", cv2.fastNlMeansDenoising(tracker_frame, None, 10, 7, 21))
         
         #analiza klatki z uzyciem sieci neuronowych

@@ -17,6 +17,11 @@ def signedSqr(num):
     if num >= 0: return num * num
     return -num * num
 
+#zwraca kwadrat liczby ze znakiem; f(x)=(x+1)^2-1
+def signedBaseOneSqr(num):
+    if num >= 0: return (num+1)**2 - 1
+    return 1 - (1-num)**2
+
 #interpolacja liniowa
 def lerp(a, b, c):
     return c*b + (1-c) * a

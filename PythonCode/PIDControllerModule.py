@@ -8,7 +8,7 @@ class PIDController:
         print("KP = " + str(self.KP))
         
     def increaseKI(self):
-        self.KI += 100
+        self.KI += 50
         print("KI = " + str(self.KI))
         
     def increaseKD(self):
@@ -19,7 +19,7 @@ class PIDController:
         print("KP = " + str(self.KP))
         
     def decreaseKI(self):
-        self.KI -= 100
+        self.KI -= 50
         print("KI = " + str(self.KI))
         
     def decreaseKD(self):
@@ -53,8 +53,8 @@ class PIDController:
 
         #wspolczynniki kontroli
         self.KP = 1.3 * 1000   #wzmocnienie czesci proporcjonalnej
-        self.KI = 0.3 * 1000    #wzmocnienie czesci calkujacej
-        self.KD = 3 * 1000   #wzmocnienie czesci rozniczkujacej
+        self.KI = 0.2 * 1000    #wzmocnienie czesci calkujacej
+        self.KD = 2.7 * 1000   #wzmocnienie czesci rozniczkujacej
 
         #pozycja serwa
         self.x_servo = 0.0
@@ -94,15 +94,22 @@ class PIDController:
         self.x_prev_error = self.x_error
         self.y_prev_error = self.y_error
 
-        self.x_error_sum += self.x_error * deltaTime / (abs(self.x_derivative)+1)
-        self.y_error_sum += self.y_error * deltaTime / (abs(self.y_derivative)+1)
+        self.x_error_sum += self.x_error * deltaTime #/ (abs(self.x_derivative)+1)
+        self.y_error_sum += self.y_error * deltaTime #/ (abs(self.y_derivative)+1)
+        
+        #base1 square
+        error_sum_magnitude = MM.magnitude(self.x_error_sum, self.y_error_sum)+2
         
         #zmiana pozycji serw z uwzglednieniem bledu biezacego, przyszlego oraz przeszlego
-        self.x_servo = (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * self.KI)
-        self.y_servo = (self.y_error * self.KP) + (self.y_derivative * self.KD) + (self.y_error_sum * self.KI)
+        self.x_servo = (self.x_error * self.KP) + (self.x_derivative * self.KD) + (self.x_error_sum * (error_sum_magnitude) * self.KI)
+        self.y_servo = (self.y_error * self.KP) + (self.y_derivative * self.KD) + (self.y_error_sum * (error_sum_magnitude) * self.KI)
+        
+        #print("x = " + str(self.x_error_sum * error_sum_magnitude))
+        #print("y = " + str(self.y_error_sum * error_sum_magnitude))
+        #print("")
         
         self.x_servo = MM.clamp(self.x_servo, -self.servo_pos_limit[0], self.servo_pos_limit[0])
         self.y_servo = MM.clamp(self.y_servo, -self.servo_pos_limit[1], self.servo_pos_limit[1])
         
-        self.x_error_sum = MM.clamp(self.x_error_sum, -1, 1) * 0.9 * 40 * deltaTime
-        self.y_error_sum = MM.clamp(self.y_error_sum, -1, 1) * 0.9 * 40 * deltaTime
+        self.x_error_sum = MM.clamp(self.x_error_sum, -1, 1) * 0.995 * 40 * deltaTime
+        self.y_error_sum = MM.clamp(self.y_error_sum, -1, 1) * 0.995 * 40 * deltaTime

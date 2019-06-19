@@ -10,7 +10,7 @@ import copy
 #program odpowiadajacy za planiwanie sciezki kulki
 class PathPlanner:
     
-    obstacle_map_size = 30    #rozmiar mapy przeszkod
+    obstacle_map_size = 60    #rozmiar mapy przeszkod
     obstacle_map_update_delta = 0.5    #co ile sekund odswiezana ma byc mapa przeszkod?
     path_sub_update_delta = 0.03    #co ile sekund aktualizowac podsciezke?
     
@@ -24,10 +24,10 @@ class PathPlanner:
         self.proximity_map = np.zeros((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size)) #tablica 2D z kosztem bliskosci wykrytych przeszkod
         
         self.path_position = 0.0   #aktualna pozycja na sciezce
-        self.path_speed = 0.5    #predkosc przechodzenia sciezki
+        self.path_speed = 0.3    #predkosc przechodzenia sciezki
         self.path_angle = 0.0    #aktualny kat miedzy kolejnymi punktami sciezki (do liczenia docelowej predkosci kulki)
         self.path_angle_previous = 0.0 #poprzednia wartosc zmiennej 'self.path_angle'
-        self.path_max_dist = 0.25**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
+        self.path_max_dist = 0.3**2 #odleglosc kulki od celu, powyzej ktorej docelowa pozycja "czeka" az kulka do niej dotrze
         self.path_position_smoothing = 0.5   #wspolczynnik wygladzania docelowej pozycjip
         self.path_position_smoothing_real = 0.0
         self.path_position_smoothing_gain = 0.3   #szybkosc odzyskiwania wygladzania po ustawieniu na zero
@@ -92,9 +92,18 @@ class PathPlanner:
         frame = np.frombuffer(_frame_array, dtype=np.int32)
         frame = np.clip(frame, 0, 255).astype('uint8').reshape((PathPlanner.obstacle_map_size, PathPlanner.obstacle_map_size))
         #cv2.imshow("Map", frame)
-        frame = cv2.inRange(frame, 40, 255)
-        #kernel = np.ones((2,2), np.uint8)
-        #frame = cv2.dilate(frame, kernel, iterations=1)
+        frame = cv2.inRange(frame, 100, 255)
+        
+        cv2.imshow("PathPlanner undilated frame", cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST))
+        key = cv2.waitKey(1) & 0xFF
+        
+        #powiekszanie przeszkod, poniewaz kulka nie jest punktem i ma pewne wymiary
+        kernel =  np.array([[0,0,1,0,0],#np.ones((3,3), dtype=np.uint8)#
+                            [0,1,1,1,0],
+                            [1,1,1,1,1],
+                            [0,1,1,1,0],
+                            [0,0,1,0,0]], dtype=np.uint8)
+        frame = cv2.dilate(frame, kernel, iterations=1)
         self.obstacle_map = frame
         
         #aktualizacja mapy bliskosci przeszkod
@@ -115,14 +124,14 @@ class PathPlanner:
                         nx = x + side[0]
                         ny = y + side[1]
                         if PathPlanner.isPointWithinMap(self, (nx, ny)):
-                            self.proximity_map[nx, ny] += 1
+                            self.proximity_map[nx, ny] += 10
         
         #np.clip(self.proximity_map, 0, 1, self.proximity_map)
         self.proximity_map *= 1000
         
         #aktualizacja glownej sciezki
-        start = PathPlanner.FromUnitaryToMapSpace((self.ball_pos_x.value, self.ball_pos_y.value), self.obstacle_map_size)
-        end = PathPlanner.FromUnitaryToMapSpace((self.target_pos_x.value, self.target_pos_y.value), self.obstacle_map_size)
+        start = PathPlanner.FromUnitaryToMapSpace((self.ball_pos_x.value, self.ball_pos_y.value), PathPlanner.obstacle_map_size)
+        end = PathPlanner.FromUnitaryToMapSpace((self.target_pos_x.value, self.target_pos_y.value), PathPlanner.obstacle_map_size)
         self.path = PathPlanner.a_star(self, start, end)
         
         self.path_last_index = len(self.path)-1
@@ -149,6 +158,7 @@ class PathPlanner:
                 
         self.frame_debug = frame
         frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
+        
         cv2.imshow("PathPlanner frame", frame)
         key = cv2.waitKey(1) & 0xFF
         
@@ -185,6 +195,7 @@ class PathPlanner:
         
         path = self.path
         ball_pos = (self.ball_pos_x.value, self.ball_pos_y.value)
+        ball_pos_map_space = PathPlanner.FromUnitaryToMapSpace(ball_pos, PathPlanner.obstacle_map_size)
         index = int(self.path_position)
         path_last_index = self.path_last_index
         A = PathPlanner.FromMapToUnitarySpace(path[index])
@@ -199,8 +210,8 @@ class PathPlanner:
             target_y = MM.lerp(A[0], B[0], mant)
             target_x = MM.lerp(A[1], B[1], mant)
             
-            #PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1], frame)
-            if not PathPlanner.Raycast(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, self.obstacle_map_size), path[index+1]) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
+            #PathPlanner.PaintRay(self, PathPlanner.FromUnitaryToMapSpace(ball_pos, PathPlanner.obstacle_map_size), path[index+1], frame)
+            if (not PathPlanner.Raycast(self, ball_pos_map_space, path[index+1]) or self.obstacle_map[ball_pos_map_space[0], ball_pos_map_space[1]] != 0) and MM.sqrMagnitude(target_x - ball_pos[1], target_y - ball_pos[0]) <= self.path_max_dist:
                 if mant < 0.5:
                     #keypoint angle and keypoint distance on which target speed relies
                     #kp_angle = self.path_angle_previous
@@ -227,11 +238,12 @@ class PathPlanner:
         self.path_position_smoothing_real = min(self.path_position_smoothing_real, self.path_position_smoothing)
         
         #DEBUG
-        if True:
+        if False:
             speed_debug /= self.path_speed
-            pos = PathPlanner.FromUnitaryToMapSpace(ball_pos, PathPlanner.obstacle_map_size)
             frame = self.frame_debug#copy.copy(self.frame_debug)
-            if PathPlanner.isPointWithinMap(self, pos):
+            pos = PathPlanner.FromUnitaryToMapSpace((self.path_y.value, self.path_x.value), PathPlanner.obstacle_map_size)
+            if PathPlanner.isPointWithinMap(self, ball_pos_map_space):
+                frame[ball_pos_map_space[0], ball_pos_map_space[1]] = [0, 255, 255]
                 frame[pos[0], pos[1]] = [0, (1.0-speed_debug) * 255, speed_debug * 255]
             frame = cv2.resize(frame, (200, 200), interpolation=cv2.INTER_NEAREST)
             cv2.imshow("PathPlanner frame", frame)
@@ -257,7 +269,7 @@ class PathPlanner:
         
     #zwraca docelowa predkosc kulki na podstawie predkosci podstawowej 'base', odlegosci 'dist' do nastepnego punktu i kata 'angle' miedzy nastepnymi punktami
     def GetTargetSpeed(base, dist, angle):
-        spd = min(base, base * 2.5 *dist + base * (1.2 - min((1.57 - 0.3/(0.1+abs(angle))) * 0.7549297, 1.0)))
+        spd = min(base, base * 3 *dist + base * (1.4 - min((1.57 - 0.3/(0.3+abs(angle))) * 0.7549297, 1.0)))
         #print("angle = " + str(angle))
         #print("dist = " + str(dist))
         #print("speed = " + str(spd))
@@ -288,7 +300,7 @@ class PathPlanner:
         
     #sprawdza, czy punkt wewnatrz mapy przeszkod
     def isPointWithinMap(self, point):
-        size = self.obstacle_map_size
+        size = PathPlanner.obstacle_map_size
         return point[0] >= 0 and point[0] < size and point[1] >= 0 and point[1] < size
         
     #algorytm A* wyznaczajacy sciezke z punktu A do B
@@ -313,12 +325,13 @@ class PathPlanner:
             v = que.pop()
             if v == end: break
             
-            new_cost = cost[v] + 1
             for move in movement:
+                new_cost = cost[v] + 1
                 nx = v[0] + move[0]
                 ny = v[1] + move[1]
                 
-                if PathPlanner.isPointWithinMap(self, (nx, ny)) and self.obstacle_map[nx, ny] == 0:
+                if PathPlanner.isPointWithinMap(self, (nx, ny)):
+                    if self.obstacle_map[nx, ny] != 0: new_cost += 100000000
                     u = (nx, ny)
                     if u not in cost or new_cost < cost[u]:
                         cost[u] = new_cost
